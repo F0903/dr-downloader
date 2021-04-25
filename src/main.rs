@@ -9,8 +9,9 @@ use std::io::{stdin, stdout, BufRead, Write};
 const URL_FIRST_HALF: &str = "https://isl.dr-massive.com/api/account/items/";
 const URL_SECOND_HALF: &str = "/videos?delivery=stream&device=web_browser&ff=idp%2Cldp%2Crpt&lang=da&resolution=HD-1080&sub=Anonymous";
 
+//NOTE: Currently, the auth token needs to be manually extracted from the browser, and put in auth.txt
 //TODO: Find a way to get an updated auth token from dr
-const AUTH: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzUxMiJ9.eyJzaWQiOiI3YTYyN2E2NC0wMDAzLTRmMWQtYjEzNC01NTA1MzA0NTIxNmQiLCJzcHIiOiJOb25lIiwiYXVkIjoiaHR0cDovL2lzbC5kci1tYXNzaXZlLmNvbS9JU0wvQXBpL1YxL0RhdGFzZXJ2aWNlIiwic3ViIjoiQ2F0YWxvZyIsImV4cCI6MTYxOTM3MzE1NywidXNlckFjY291bnRJZCI6Ijc1YTJiMDZiODYyYTQ0ZjliMDljZGVkYzdmNTVmMTU3IiwidXNlclByb2ZpbGVJZCI6Ijc1YTJiMDZiODYyYTQ0ZjliMDljZGVkYzdmNTVmMTU3IiwiZW1haWwiOiI3NWEyYjA2Yjg2MmE0NGY5YjA5Y2RlZGM3ZjU1ZjE1N0BleGFtcGxlLmNvbSIsImRldmljZSI6IndlYl9icm93c2VyIiwidmFsaWRVbnRpbCI6MTY1MDg5ODM1NywiaXNPcHRlZE91dCI6dHJ1ZSwiaXNDb3VudHJ5VmVyaWZpZWQiOmZhbHNlLCJnZW9Mb2NhdGlvbiI6ImRrIiwiaXNEZXZpY2VBYnJvYWQiOmZhbHNlLCJzdWJzY3JpcHRpb24iOiJBbm9ueW1vdXMifQ.e2JhIX2GomCmOfuWhhuUBEiFMLSKlWDPYqkcImWgsVrT6wxIPkj1ZlBufZDsUzMwwLcIOzapbCyeLUVb2bBz_UhYaxHiDWL_EZVqUfVT4zJ9YbPu0SkCE_h9_8mz6NFFuGsDIsaU8FE4MiU5sltLlSLIPUDa1AVbGAK6JNYY9Ny7gmu5xNPnjzwvpXOWVDtIwnloH-0xZWtPPDD_VRpEipQdCTei57BV9hcevNF4sH77AiYGlco6HMI7yJgilxCuRhJr0ZA_cqh-X0ZeHPYeLydAcbCwiXjEE-zQk3KM2krC3-BhjIiuO8hzveuzrznx8Ca5JHWC08AXzbh7Cf0iYA";
+const AUTH: &str = include_str!("auth.txt");
 
 type Result<'a, T, E = Box<dyn Error>> = std::result::Result<T, E>;
 
