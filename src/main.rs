@@ -102,7 +102,7 @@ async fn main() -> Result<'static, ()> {
 		let id = get_video_id(&input_url).await?;
 		let url = get_video_url(&net, id).await?;
 		let content = get_file(&url).await?;
-		write(format!("./video_{}.m3u8", video_num), content)?;
+		write(format!("./out/video_{}.m3u8", video_num), content)?;
 		video_num += 1;
 		out.write_all(b"Done!")?;
 		out.flush()?;
