@@ -1,0 +1,14 @@
+#EXTM3U
+#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs",NAME="Dansk",DEFAULT=NO,AUTOSELECT=NO,FORCED=NO,URI="https://drod03a-vh.akamaihd.net/p/allx/clear/download/29/5f2ace53aa5a61107880bb29/subtitles/HardOfHearing-17556956-91240881-9835-46cd-a26a-58a63fed56a1/playlist.m3u8",LANGUAGE="da"
+#EXT-X-STREAM-INF:SUBTITLES="subs",PROGRAM-ID=1,BANDWIDTH=299000,RESOLUTION=640x360,CODECS="avc1.66.30, mp4a.40.2"
+https://drod03a-vh.akamaihd.net/i/all/clear/download/29/5f2ace53aa5a61107880bb29/Nak---AEd---en-raage-i_71ef17afea884e75b73666e4935dd484_,300,512,1000,2200,3000,4300,.mp4.csmil/index_0_av.m3u8?null=0
+#EXT-X-STREAM-INF:SUBTITLES="subs",PROGRAM-ID=1,BANDWIDTH=466000,RESOLUTION=640x360,CODECS="avc1.66.30, mp4a.40.2"
+https://drod03a-vh.akamaihd.net/i/all/clear/download/29/5f2ace53aa5a61107880bb29/Nak---AEd---en-raage-i_71ef17afea884e75b73666e4935dd484_,300,512,1000,2200,3000,4300,.mp4.csmil/index_1_av.m3u8?null=0
+#EXT-X-STREAM-INF:SUBTITLES="subs",PROGRAM-ID=1,BANDWIDTH=928000,RESOLUTION=854x480,CODECS="avc1.640029, mp4a.40.2"
+https://drod03a-vh.akamaihd.net/i/all/clear/download/29/5f2ace53aa5a61107880bb29/Nak---AEd---en-raage-i_71ef17afea884e75b73666e4935dd484_,300,512,1000,2200,3000,4300,.mp4.csmil/index_2_av.m3u8?null=0
+#EXT-X-STREAM-INF:SUBTITLES="subs",PROGRAM-ID=1,BANDWIDTH=1668000,RESOLUTION=1280x720,CODECS="avc1.640029, mp4a.40.2"
+https://drod03a-vh.akamaihd.net/i/all/clear/download/29/5f2ace53aa5a61107880bb29/Nak---AEd---en-raage-i_71ef17afea884e75b73666e4935dd484_,300,512,1000,2200,3000,4300,.mp4.csmil/index_3_av.m3u8?null=0
+#EXT-X-STREAM-INF:SUBTITLES="subs",PROGRAM-ID=1,BANDWIDTH=2223000,RESOLUTION=1920x1080,CODECS="avc1.640029, mp4a.40.2"
+https://drod03a-vh.akamaihd.net/i/all/clear/download/29/5f2ace53aa5a61107880bb29/Nak---AEd---en-raage-i_71ef17afea884e75b73666e4935dd484_,300,512,1000,2200,3000,4300,.mp4.csmil/index_4_av.m3u8?null=0
+#EXT-X-STREAM-INF:SUBTITLES="subs",PROGRAM-ID=1,BANDWIDTH=3163000,RESOLUTION=1920x1080,CODECS="avc1.640029, mp4a.40.2"
+https://drod03a-vh.akamaihd.net/i/all/clear/download/29/5f2ace53aa5a61107880bb29/Nak---AEd---en-raage-i_71ef17afea884e75b73666e4935dd484_,300,512,1000,2200,3000,4300,.mp4.csmil/index_5_av.m3u8?null=0
