@@ -1,0 +1,3 @@
+[env]
+FFMPEG_DIR = "./ffmpeg/"
+LIBAVUTIL_NO_PKG_CONFIG = true
