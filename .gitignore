@@ -1,4 +1,4 @@
 /target
 
-out
-auth.txt
+video_*.*
+token.txt

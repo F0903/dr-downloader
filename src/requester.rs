@@ -1,9 +1,11 @@
+use crate::cacher::get_or_cache_token;
 use crate::error::GenericError;
-use reqwest::{Client, StatusCode};
-use serde_json::{json, Value};
+use reqwest::{header, Client, StatusCode};
+use serde_json::Value;
 use std::error::Error;
 
-pub type Result<'a, T, E = Box<dyn Error>> = std::result::Result<T, E>;
+type ErrorType = Box<dyn Error>;
+pub type Result<'a, T, E = ErrorType> = std::result::Result<T, E>;
 
 pub struct Requester {
 	net: Client,
@@ -13,15 +15,21 @@ pub struct Requester {
 impl Requester {
 	pub async fn new<'a>() -> Result<'a, Requester> {
 		let net = Client::new();
-		let token = Requester::get_auth_token(&net).await?;
+		let token = get_or_cache_token(async || Requester::get_auth_token(&net).await).await?;
 		Ok(Requester { net, token })
 	}
 
 	async fn get_auth_token<'b>(net: &Client) -> Result<'_, String> {
-		//TODO: Fix the error from unsupported media type
+		println!("Getting auth token...");
 		const AUTH_ENDPOINT: &str = "https://isl.dr-massive.com/api/authorization/anonymous-sso?device=web_browser&ff=idp%2Cldp%2Crpt&lang=da";
+		let mut headers = header::HeaderMap::new();
+		headers.append(
+			"Content-Type",
+			header::HeaderValue::from_static("application/json"),
+		);
 		let response = net
 			.post(AUTH_ENDPOINT)
+			.headers(headers)
 			.body("{\"deviceId\":\"632bdbff-d073-4b6c-85cb-76a0de00506d\",\"scopes\":[\"Catalog\"],\"optout\":true,\"cookieType\":\"Session\"}")
 			.send()
 			.await?;
@@ -38,21 +46,22 @@ impl Requester {
 		let root = json
 			.get(0)
 			.ok_or_else(|| GenericError("Could not get JSON value.".into()))?;
-		let first_obj = root
-			.get(0)
-			.ok_or_else(|| GenericError("Could not get JSON value.".into()))?;
-		let token = first_obj["value"]
+		let token = root["value"]
 			.as_str()
 			.ok_or_else(|| GenericError("Could not get JSON value as str.".into()))?;
 		Ok(token.into())
 	}
 
 	async fn refresh_token(&mut self) -> Result<'_, ()> {
+		println!("Refreshing auth token...");
 		const REFRESH_ENDPOINT: &str =
 			"https://isl.dr-massive.com/api/authorization/refresh?ff=idp%2Cldp%2Crpt&lang=da";
+		let mut headers = header::HeaderMap::new();
+		headers.append("Content-Type", "application/json".parse()?);
 		let response = self
 			.net
 			.post(REFRESH_ENDPOINT)
+			.headers(headers)
 			.body(format!("{{ \"token\": \"{}\"}}", self.token))
 			.send()
 			.await?;
@@ -105,6 +114,7 @@ impl Requester {
 
 	#[async_recursion::async_recursion]
 	pub async fn get_media_url<'b>(&mut self, video_id: &str) -> Result<'b, String> {
+		println!("Sending request...");
 		let url = Self::construct_query_url(video_id).await?;
 		let result = self.net.get(url).bearer_auth(&self.token).send().await?;
 
