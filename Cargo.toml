@@ -7,7 +7,8 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-tokio = { version = "1.5.0", features = ["full"] }
-async-recursion = "0.3.2"
-reqwest = "*"
+tokio = { version = "1.5.*", features = ["full"] }
+async-recursion = "0.3.*"
+reqwest = "0.11.*"
 serde_json = "1.0.*"
+#ffmpeg-next = { version = "4.3.*", features = ["codec", "format"] }

@@ -1,4 +1,4 @@
-use crate::cacher::get_or_cache_token;
+use crate::cacher::{cache_token, get_or_cache_token};
 use crate::error::GenericError;
 use reqwest::{header, Client, StatusCode};
 use serde_json::Value;
@@ -75,13 +75,12 @@ impl Requester {
 
 		let text = response.text().await?;
 		let json = serde_json::from_str::<serde_json::Value>(&text)?;
-		let root = json
-			.get(0)
-			.ok_or_else(|| GenericError("Could not get JSON value.".into()))?;
-		let val = root["value"]
+		let val = json["value"]
 			.as_str()
 			.ok_or_else(|| GenericError("Could not get JSON value.".into()))?;
-		self.token = val.into();
+		let token = val.into();
+		cache_token(&token).ok();
+		self.token = token;
 		Ok(())
 	}
 
@@ -119,14 +118,14 @@ impl Requester {
 		let result = self.net.get(url).bearer_auth(&self.token).send().await?;
 
 		let status = result.status();
+		if status == StatusCode::UNAUTHORIZED || status == StatusCode::FORBIDDEN {
+			self.refresh_token().await?;
+			return self.get_media_url(video_id).await;
+		}
 		if status != StatusCode::OK {
 			return Err(
 				GenericError(format!("Status code was not 200 OK.\nCode: {}", status)).into(),
 			);
-		}
-		if status == StatusCode::UNAUTHORIZED {
-			self.refresh_token().await?;
-			return self.get_media_url(video_id).await;
 		}
 
 		let text = result.text().await?;
