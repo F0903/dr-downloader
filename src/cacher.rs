@@ -1,15 +1,19 @@
-use std::fs::{read, write};
-use std::io::{Error, ErrorKind, Result};
+use std::io::{ErrorKind, Result};
+use winreg::{enums, HKEY};
 
-const TOKEN_PATH: &str = "./token.txt";
+//TODO: Make a cacher for linux or mac
+
+const BASE_PATH: HKEY = enums::HKEY_CURRENT_USER;
+const KEY_PATH: &str = "SOFTWARE\\dr-downloader";
 
 pub fn get_token() -> Result<String> {
-	let token = read(TOKEN_PATH)?;
-	String::from_utf8(token).map_err(|_e| Error::from(ErrorKind::InvalidData))
+	let key = winreg::RegKey::predef(BASE_PATH).open_subkey(KEY_PATH)?;
+	key.get_value("token")
 }
 
 pub fn cache_token<T: AsRef<str>>(token: T) -> Result<()> {
-	write(TOKEN_PATH, token.as_ref())
+	let (key, _disp) = winreg::RegKey::predef(BASE_PATH).create_subkey(KEY_PATH)?;
+	key.set_value("token", &token.as_ref())
 }
 
 pub async fn get_or_cache_token<
@@ -23,6 +27,6 @@ pub async fn get_or_cache_token<
 		return Ok(token);
 	}
 	let token = token_factory().await.map_err(|_e| ErrorKind::Other)?;
-	cache_token(&token).ok();
+	cache_token(&token)?;
 	Ok(token)
 }
