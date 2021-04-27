@@ -2,6 +2,3 @@
 
 video_*.*
 token.txt
-
-#TEMP
-ffmpeg-win32.exe

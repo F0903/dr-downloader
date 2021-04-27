@@ -72,10 +72,10 @@ async fn main() -> Result<'static, ()> {
 	let mut video_num: u8 = get_video_num().unwrap_or(0);
 	loop {
 		clear_console();
-		println!("Enter url: ");
+		print!("\x1B[1mEnter url:\x1B[0m ");
 		let result = do_stuff(&inp, &mut downloader, &mut video_num).await;
 		if let Err(val) = result {
-			println!("Error! {}", val);
+			println!("\x1B[91mError!\x1B[0m {}", val);
 			let trace = val.backtrace();
 			if let Some(bt) = trace {
 				std::fs::write("error.txt", bt.to_string()).ok();
@@ -83,7 +83,7 @@ async fn main() -> Result<'static, ()> {
 			std::thread::sleep(std::time::Duration::from_millis(10000));
 			continue;
 		}
-		println!("Done!");
+		println!("\x1B[92mDone!\x1B[0m");
 		std::thread::sleep(std::time::Duration::from_millis(3000));
 	}
 }
