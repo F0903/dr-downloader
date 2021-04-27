@@ -1,8 +1,6 @@
 use std::io::{ErrorKind, Result};
 use winreg::{enums, HKEY};
 
-//TODO: Make a cacher for linux or mac
-
 const BASE_PATH: HKEY = enums::HKEY_CURRENT_USER;
 const KEY_PATH: &str = "SOFTWARE\\dr-downloader";
 
