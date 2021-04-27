@@ -34,14 +34,8 @@ impl Converter {
 				"http,https,tcp,tls,crypto,data,file,pipe",
 				"-i",
 				"pipe:0",
-				"-bsf:a",
-				"aac_adtstoasc",
-				"-vcodec",
-				"copy",
 				"-c",
 				"copy",
-				"-crf",
-				"50",
 				out,
 			])
 			.stdin(Stdio::piped())
