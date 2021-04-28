@@ -78,7 +78,7 @@ async fn main() -> Result<'static, ()> {
 				std::fs::write("error.txt", bt.to_string()).ok();
 			}
 			const CLEAR_TIME: u16 = 5000;
-			fprint!("Clearing in {}", CLEAR_TIME);
+			fprint!("Clearing in {}s", CLEAR_TIME / 1000);
 			std::thread::sleep(std::time::Duration::from_millis(CLEAR_TIME as u64));
 			continue;
 		}
