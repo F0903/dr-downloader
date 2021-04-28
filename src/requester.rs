@@ -85,7 +85,10 @@ impl Requester {
 	}
 
 	pub async fn get_video_id(url: &str) -> Result<'_, &str> {
-		let index = url.rfind('_').unwrap() + 1;
+		let index = url
+			.rfind('_')
+			.ok_or_else(|| GenericError("Could not find video id seperator.".into()))?
+			+ 1;
 		let mut end = url.len();
 		url.chars().rev().enumerate().for_each(|(i, ch)| {
 			if i > 2 {

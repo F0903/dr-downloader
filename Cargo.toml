@@ -1,24 +1,25 @@
 [package]
 name = "dr-downloader"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Frederik P. B. H. <frepbh@gmail.com>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+regex = "1.4.*"
 tokio = { version = "1.5.*", features = ["full"] }
 async-recursion = "0.3.*"
 reqwest = "0.11.*"
 serde_json = "1.0.*"
-
+lazy_static = "1.4.0"
 
 [target.'cfg(windows)'.dependencies]
-winapi = { version = "0.3.9", features = [
+winapi = { version = "0.3.*", features = [
 	"playsoundapi",
 	"consoleapi",
 	"errhandlingapi",
 	"processenv",
 	"winbase",
 ] }
-winreg = "0.8"
+winreg = "0.8.*"

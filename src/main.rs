@@ -2,10 +2,15 @@
 #![feature(async_closure)]
 #![feature(backtrace)]
 
+#[macro_use]
+extern crate lazy_static;
+
 mod cacher;
 mod converter;
 mod downloader;
 mod error;
+#[macro_use]
+mod printutil;
 mod requester;
 
 #[cfg(all(windows, not(debug_assertions)))]
@@ -14,23 +19,7 @@ mod win32;
 use downloader::Downloader;
 use requester::Result;
 use std::fs;
-use std::io::{stdin, Stdin};
-
-macro_rules! fprint {
-	($($arg:tt)*) => {{
-		use std::io::Write;
-		print!($($arg)*);
-		::std::io::stdout().flush().ok();
-	}};
-}
-
-macro_rules! fprintln {
-	($($arg:tt)*) => {{
-		use std::io::Write;
-		println!($($arg)*);
-		::std::io::stdout().flush().ok();
-	}};
-}
+use std::io::stdin;
 
 fn clear_console() {
 	print!("\x1B[2J\x1B[1;1H");
@@ -61,25 +50,12 @@ fn get_video_num<'a>() -> Result<'a, u8> {
 	Ok(largest_num)
 }
 
-async fn do_stuff(
-	inp: &Stdin,
-	downloader: &mut Downloader,
-	video_num: &mut u8,
-) -> Result<'static, ()> {
-	let mut input_url = String::new();
-	inp.read_line(&mut input_url)?;
-	downloader
-		.download(format!("./video_{}.mp4", video_num), &input_url)
-		.await?;
-	*video_num += 1;
-	Ok(())
-}
-
 #[tokio::main]
 async fn main() -> Result<'static, ()> {
 	#[cfg(all(windows, not(debug_assertions)))]
 	win32::set_color_mode();
 
+	let mut input_url = String::new();
 	let mut downloader = Downloader::new(
 		requester::Requester::new().await?,
 		converter::Converter::new()?,
@@ -89,17 +65,25 @@ async fn main() -> Result<'static, ()> {
 	loop {
 		clear_console();
 		fprint!("\x1B[1mEnter url:\x1B[0m ");
-		let result = do_stuff(&inp, &mut downloader, &mut video_num).await;
+
+		inp.read_line(&mut input_url)?;
+		let result = downloader
+			.download(format!("./video_{}.mp4", video_num), &input_url)
+			.await;
+
 		if let Err(val) = result {
 			fprintln!("\x1B[91mError!\x1B[0m {}", val);
 			let trace = val.backtrace();
 			if let Some(bt) = trace {
 				std::fs::write("error.txt", bt.to_string()).ok();
 			}
-			std::thread::sleep(std::time::Duration::from_millis(10000));
+			const CLEAR_TIME: u16 = 5000;
+			fprint!("Clearing in {}", CLEAR_TIME);
+			std::thread::sleep(std::time::Duration::from_millis(CLEAR_TIME as u64));
 			continue;
 		}
+		video_num += 1;
 		fprintln!("\x1B[92mDone!\x1B[0m");
-		std::thread::sleep(std::time::Duration::from_millis(3000));
+		std::thread::sleep(std::time::Duration::from_millis(2000));
 	}
 }

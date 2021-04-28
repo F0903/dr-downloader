@@ -18,7 +18,7 @@ impl Converter {
 		})
 	}
 
-	pub fn convert<T: AsRef<str>>(&self, data: &[u8], out_path: T) -> Result<()> {
+	pub fn convert(&self, data: &[u8], out_path: impl AsRef<str>) -> Result<()> {
 		let ffmpeg_path = self.ffmpeg_path.as_ref().ok_or(ErrorKind::NotFound)?;
 		let out = out_path.as_ref();
 		std::fs::write(out, "")?; // Create file first otherwise canonicalize wont work.
@@ -43,7 +43,7 @@ impl Converter {
 			.stdout(Stdio::inherit())
 			.spawn()?;
 		{
-			let mut inp = proc.stdin.take().unwrap();
+			let mut inp = proc.stdin.take().ok_or(ErrorKind::BrokenPipe)?;
 			inp.write_all(&data)?;
 			inp.flush()?;
 		}

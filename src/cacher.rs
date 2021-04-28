@@ -9,7 +9,7 @@ pub fn get_token() -> Result<String> {
 	key.get_value("token")
 }
 
-pub fn cache_token<T: AsRef<str>>(token: T) -> Result<()> {
+pub fn cache_token(token: impl AsRef<str>) -> Result<()> {
 	let (key, _disp) = winreg::RegKey::predef(BASE_PATH).create_subkey(KEY_PATH)?;
 	key.set_value("token", &token.as_ref())
 }
