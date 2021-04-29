@@ -53,7 +53,7 @@ fn get_video_num<'a>() -> Result<'a, u8> {
 #[tokio::main]
 async fn main() -> Result<'static, ()> {
 	#[cfg(all(windows, not(debug_assertions)))]
-	win32::set_color_mode();
+	win32::set_virtual_console_mode();
 
 	let mut input_url = String::new();
 	let mut downloader = Downloader::new(

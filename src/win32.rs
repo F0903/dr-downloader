@@ -1,9 +1,9 @@
 #[cfg(all(windows, not(debug_assertions)))]
 use winapi::um::{consoleapi, errhandlingapi, processenv, winbase, wincon};
 
-/// Set virtual console mode to use colors. (win32)
+/// Set virtual console mode to use colors, or other control characters. (win32)
 #[cfg(all(windows, not(debug_assertions)))]
-pub fn set_color_mode() {
+pub fn set_virtual_console_mode() {
 	let mut error = false;
 	unsafe {
 		let out = processenv::GetStdHandle(winbase::STD_OUTPUT_HANDLE);
@@ -22,6 +22,6 @@ pub fn set_color_mode() {
 	}
 
 	if error {
-		println!("Error(s) detected in set_color_mode(). The console might contain strange characters due to this.");
+		println!("Error(s) detected in set_virtual_console_mode(). The console might contain strange characters due to this.");
 	}
 }
