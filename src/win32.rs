@@ -19,20 +19,6 @@ pub fn set_color_mode() {
 			println!("SetConsoleMode failed with err code {}", err);
 			error = true;
 		}
-
-		let inp = processenv::GetStdHandle(winbase::STD_INPUT_HANDLE);
-		let mut inp_mode: u32 = 0;
-		if consoleapi::GetConsoleMode(inp, &mut inp_mode as *mut u32) == 0 {
-			let err = errhandlingapi::GetLastError();
-			println!("GetConsoleMode failed with err code {}", err);
-			error = true;
-		}
-		inp_mode |= wincon::ENABLE_VIRTUAL_TERMINAL_INPUT;
-		if consoleapi::SetConsoleMode(inp, inp_mode) == 0 {
-			let err = errhandlingapi::GetLastError();
-			println!("SetConsoleMode failed with err code {}", err);
-			error = true;
-		}
 	}
 
 	if error {
