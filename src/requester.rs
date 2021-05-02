@@ -103,15 +103,58 @@ impl Requester {
 	}
 
 	async fn construct_query_url(id: &str) -> Result<'_, String> {
-		const URL_FIRST_HALF: &str = "https://isl.dr-massive.com/api/account/items/";
-		const URL_SECOND_HALF: &str = "/videos?delivery=stream&device=web_browser&ff=idp%2Cldp%2Crpt&lang=da&resolution=HD-1080&sub=Anonymous";
+		const QUERY_URL_1: &str = "https://isl.dr-massive.com/api/account/items/";
+		const QUERY_URL_2: &str = "/videos?delivery=stream&device=web_browser&ff=idp%2Cldp%2Crpt&lang=da&resolution=HD-1080&sub=Anonymous";
 
-		let mut string =
-			String::with_capacity(URL_FIRST_HALF.len() + id.len() + URL_SECOND_HALF.len());
-		string.push_str(URL_FIRST_HALF);
-		string.push_str(id);
-		string.push_str(URL_SECOND_HALF);
-		Ok(string)
+		let mut url = String::with_capacity(QUERY_URL_1.len() + id.len() + QUERY_URL_2.len());
+		url.push_str(QUERY_URL_1);
+		url.push_str(id);
+		url.push_str(QUERY_URL_2);
+		Ok(url)
+	}
+
+	fn parse_playlist_path_from_url(playlist_url: &str) -> Result<'_, String> {
+		let split = playlist_url.split("drtv");
+		let trail = split.last().ok_or_else(|| {
+			GenericError("Could not get the last element of split in playlist url.".into())
+		})?;
+		let path = trail.replace('/', "%2F");
+		let path = path.replace(' ', "%20");
+		Ok(path)
+	}
+
+	pub async fn get_playlist_videos(&self, playlist_url: &str) -> Result<'_, Vec<String>> {
+		const PLAYLIST_INFO_URL_1: &str = "https://www.dr-massive.com/api/page?device=web_browser&ff=idp%2Cldp%2Crpt&geoLocation=dk&isDeviceAbroad=false&item_detail_expand=children&lang=da&list_page_size=24&max_list_prefetch=3&path=";
+		const PLAYLIST_INFO_URL_2: &str =
+			"&segments=drtv%2Coptedin&sub=Anonymous&text_entry_format=html";
+
+		let mut url = String::with_capacity(
+			PLAYLIST_INFO_URL_1.len() + playlist_url.len() / 2 + PLAYLIST_INFO_URL_2.len(),
+		);
+		let path = Self::parse_playlist_path_from_url(playlist_url)?;
+		url.push_str(PLAYLIST_INFO_URL_1);
+		url.push_str(&path);
+		url.push_str(PLAYLIST_INFO_URL_2);
+
+		let response = self.net.get(url).send().await?;
+		let text = response.text().await?;
+		let json: Value = serde_json::from_str(&text)?;
+		let playlist = &json["item"];
+		let eps_precursor = &playlist["episodes"];
+		let eps_root = &eps_precursor["items"];
+
+		let eps = eps_root
+			.as_array()
+			.ok_or_else(|| GenericError("Could not convert eps_root to an array.".into()))?;
+		let ep_links = eps
+			.iter()
+			.map(|x| {
+				let mut path = x["watchPath"].as_str().unwrap().to_owned();
+				path.insert_str(0, "https://www.dr.dk/drtv");
+				path
+			})
+			.collect::<Vec<String>>();
+		Ok(ep_links)
 	}
 
 	#[async_recursion::async_recursion]
