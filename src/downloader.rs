@@ -62,6 +62,7 @@ impl Downloader {
 		playlist_url: impl AsRef<str>,
 		out_dir: impl ToString,
 	) -> Result<()> {
+		//TODO: See how it reacts when the token needs to be refreshed in a parallel setting
 		println!("Downloading playlist...");
 		let eps = self
 			.requester

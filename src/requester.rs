@@ -103,8 +103,9 @@ impl Requester {
 			.ok_or_else(|| GenericError("Could not get JSON value.".into()))?;
 		let token = val;
 		cache_token(&token).ok();
-		let mut token_ref = self.token.lock().unwrap(); // Unsure if this is gonna work. (i think it does)
+		let mut token_ref = self.token.lock().unwrap();
 		*token_ref = token.to_owned();
+		println!("Refreshed auth token. Resuming...");
 		Ok(())
 	}
 

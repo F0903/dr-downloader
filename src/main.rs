@@ -20,6 +20,17 @@ use downloader::Downloader;
 use requester::Result;
 use std::io::stdin;
 
+macro_rules! do_while {
+	(($cond:expr)$body:block) => {
+		loop {
+			let res = $body;
+			if !$cond {
+				break res;
+			}
+		}
+	};
+}
+
 fn clear_console() {
 	print!("\x1B[2J\x1B[1;1H");
 }
@@ -44,14 +55,24 @@ async fn main() -> Result<()> {
 		converter::Converter::new()?,
 	)));
 
-	let inp = stdin();
-	let mut input_url = String::new();
-	loop {
-		clear_console();
-		fprint!("\x1B[1mEnter url:\x1B[0m ");
+	let mut args = std::env::args();
+	let input_mode = args.len() <= 1;
 
-		inp.read_line(&mut input_url)?;
-		let result = downloader.download("./", &input_url).await;
+	let inp = stdin();
+	let mut input_buffer = if input_mode {
+		String::new()
+	} else {
+		args.nth(1).unwrap()
+	};
+
+	do_while!((input_mode) {
+		if input_mode {
+			clear_console();
+			fprint!("\x1B[1mEnter url:\x1B[0m ");
+			inp.read_line(&mut input_buffer)?;
+		}
+
+		let result = downloader.download("./", &input_buffer).await;
 
 		if let Err(val) = result {
 			log_error(val);
@@ -63,5 +84,6 @@ async fn main() -> Result<()> {
 
 		fprintln!("\x1B[92mDone!\x1B[0m");
 		std::thread::sleep(std::time::Duration::from_millis(2000));
-	}
+	});
+	Ok(())
 }
