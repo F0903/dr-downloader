@@ -15,7 +15,7 @@ enum URLType {
 }
 
 impl URLType {
-	pub fn get(url: &str) -> Result<'_, URLType> {
+	pub fn get(url: &str) -> Result<URLType> {
 		if url.contains("saeson") {
 			return Ok(URLType::Playlist);
 		} else if url.contains("episode") || url.contains("se") {
@@ -38,14 +38,14 @@ impl Downloader {
 		}
 	}
 
-	async fn verify_url(url: &str) -> Result<'_, ()> {
+	async fn verify_url(url: &str) -> Result<()> {
 		if !DR_VID_URL_REGEX.is_match(url) {
 			return Err("Unrecognzed URL.".into());
 		}
 		Ok(())
 	}
 
-	async fn get_as_string(url: &str) -> Result<'_, String> {
+	async fn get_as_string(url: &str) -> Result<String> {
 		let result = reqwest::get(url).await?;
 		let status = result.status();
 		if status != StatusCode::OK {
@@ -57,29 +57,41 @@ impl Downloader {
 		Ok(text)
 	}
 
-	async fn download_playlist(&mut self, playlist_url: &str, out_dir: &str) -> Result<'_, ()> {
+	async fn download_playlist(
+		&'static self,
+		playlist_url: impl AsRef<str>,
+		out_dir: impl ToString,
+	) -> Result<()> {
 		println!("Downloading playlist...");
-		let eps = self.requester.get_playlist_videos(playlist_url).await?;
+		let eps = self
+			.requester
+			.get_playlist_videos(playlist_url.as_ref())
+			.await?;
+		let mut tasks = vec![];
 		for ep in eps {
-			let result = self.download_video(&ep, out_dir).await;
-			if result.is_err() {
-				const DELAY: u16 = 3000;
-				println!(
-					"Something went wrong with last download. Continuing to next video in {}s...",
-					DELAY / 1000
-				);
-				std::thread::sleep(std::time::Duration::from_millis(DELAY as u64));
-			}
+			let dir = out_dir.to_string();
+			tasks.push(tokio::spawn(async move {
+				let result = self.download_video(&ep, dir).await;
+				match result {
+					Ok(_) => println!("Download of {} succeeded", ep),
+					Err(_) => println!("Download of {} failed.", ep),
+				}
+			}));
 		}
+		futures::future::join_all(tasks).await;
 		Ok(())
 	}
 
-	async fn download_video(&mut self, video_url: &str, out_dir: &str) -> Result<'_, ()> {
+	async fn download_video(
+		&self,
+		video_url: impl AsRef<str>,
+		out_dir: impl AsRef<str>,
+	) -> Result<()> {
 		println!("Downloading video...");
-		let info = Requester::get_video_info(video_url).await?;
+		let info = Requester::get_video_info(video_url.as_ref()).await?;
 		let url = self.requester.get_media_url(info.id).await?;
 		let content = Self::get_as_string(&url).await?;
-		let mut path = path::PathBuf::from(out_dir);
+		let mut path = path::PathBuf::from(out_dir.as_ref());
 		path.push(format!("./{}.mp4", info.name));
 		self.converter.convert(
 			content.as_bytes(),
@@ -90,15 +102,15 @@ impl Downloader {
 	}
 
 	pub async fn download(
-		&mut self,
+		&'static self,
 		out_dir: impl AsRef<str>,
 		url: impl AsRef<str>,
-	) -> Result<'_, ()> {
+	) -> Result<()> {
 		Downloader::verify_url(url.as_ref()).await?;
 		let url_type = URLType::get(url.as_ref())?;
 		match url_type {
 			URLType::Playlist => self.download_playlist(url.as_ref(), out_dir.as_ref()).await,
-			URLType::Video => self.download_video(url.as_ref(), out_dir.as_ref()).await,
+			URLType::Video => self.download_video(url.as_ref(), out_dir).await,
 		}
 	}
 }

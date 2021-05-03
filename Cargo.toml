@@ -7,7 +7,6 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-rayon = "^1.5"
 regex = "^1.4"
 tokio = { version = "^1.5", features = ["full"] }
 async-recursion = "^0.3"

@@ -29,7 +29,7 @@ impl Converter {
 				"-y",
 				"-hide_banner",
 				"-loglevel",
-				"info",
+				"panic",
 				"-protocol_whitelist",
 				"http,https,tcp,tls,crypto,data,file,pipe",
 				"-i",

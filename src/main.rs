@@ -35,17 +35,17 @@ fn log_error(err: impl AsRef<dyn std::error::Error>) {
 }
 
 #[tokio::main]
-async fn main() -> Result<'static, ()> {
+async fn main() -> Result<()> {
 	#[cfg(all(windows, not(debug_assertions)))]
 	win32::set_virtual_console_mode();
 
-	let mut input_url = String::new();
-	let mut downloader = Downloader::new(
+	let downloader = Box::leak::<'static>(Box::new(Downloader::new(
 		requester::Requester::new().await?,
 		converter::Converter::new()?,
-	);
-	let inp = stdin();
+	)));
 
+	let inp = stdin();
+	let mut input_url = String::new();
 	loop {
 		clear_console();
 		fprint!("\x1B[1mEnter url:\x1B[0m ");

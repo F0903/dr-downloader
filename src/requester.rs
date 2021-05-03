@@ -3,9 +3,10 @@ use crate::error::GenericError;
 use reqwest::{header, Client, StatusCode};
 use serde_json::Value;
 use std::error::Error;
+use std::sync::{Arc, Mutex};
 
 type ErrorType = Box<dyn Error>;
-pub type Result<'a, T, E = ErrorType> = std::result::Result<T, E>;
+pub type Result<T, E = ErrorType> = std::result::Result<T, E>;
 
 pub struct VideoInfo<'a> {
 	pub name: &'a str,
@@ -14,18 +15,19 @@ pub struct VideoInfo<'a> {
 
 pub struct Requester {
 	net: Client,
-	token: String,
+	token: Arc<Mutex<String>>,
 }
 
 impl Requester {
-	pub async fn new<'a>() -> Result<'a, Requester> {
+	pub async fn new<'a>() -> Result<Requester> {
 		let net = Client::new();
-		let token = get_or_cache_token(async || Requester::get_auth_token(&net).await).await?;
+		let token = Arc::new(Mutex::new(
+			get_or_cache_token(async || Requester::get_auth_token(&net).await).await?,
+		));
 		Ok(Requester { net, token })
 	}
 
-	async fn get_auth_token<'b>(net: &Client) -> Result<'_, String> {
-		println!("Getting auth token...");
+	async fn get_auth_token<'b>(net: &Client) -> Result<String> {
 		const AUTH_ENDPOINT: &str = "https://isl.dr-massive.com/api/authorization/anonymous-sso?device=web_browser&ff=idp%2Cldp%2Crpt&lang=da";
 		let mut headers = header::HeaderMap::new();
 		headers.append(
@@ -57,7 +59,23 @@ impl Requester {
 		Ok(token.into())
 	}
 
-	async fn refresh_token(&mut self) -> Result<'_, ()> {
+	async fn refresh_token(&self) -> Result<()> {
+		let token: Option<String>;
+		{
+			let token_lock = self.token.try_lock().ok();
+			if token_lock.is_none() {
+				// If token is locked. (already refreshing)
+				let lock = self.token.lock().unwrap();
+				drop(lock);
+				return Ok(());
+			}
+			{
+				let guard = token_lock.unwrap();
+				token = Some(guard.clone());
+			}
+		}
+		let token = token.unwrap();
+
 		println!("Refreshing auth token...");
 		const REFRESH_ENDPOINT: &str =
 			"https://isl.dr-massive.com/api/authorization/refresh?ff=idp%2Cldp%2Crpt&lang=da";
@@ -67,7 +85,7 @@ impl Requester {
 			.net
 			.post(REFRESH_ENDPOINT)
 			.headers(headers)
-			.body(format!("{{ \"token\": \"{}\"}}", self.token))
+			.body(format!("{{ \"token\": \"{}\"}}", token))
 			.send()
 			.await?;
 
@@ -83,13 +101,14 @@ impl Requester {
 		let val = json["value"]
 			.as_str()
 			.ok_or_else(|| GenericError("Could not get JSON value.".into()))?;
-		let token = val.into();
+		let token = val;
 		cache_token(&token).ok();
-		self.token = token;
+		let mut token_ref = self.token.lock().unwrap(); // Unsure if this is gonna work. (i think it does)
+		*token_ref = token.to_owned();
 		Ok(())
 	}
 
-	async fn get_video_id<'a>(url: &'a str) -> Result<'_, &'a str> {
+	async fn get_video_id(url: &str) -> Result<&str> {
 		let id_start = url
 			.rfind('_')
 			.ok_or_else(|| GenericError("Could not find video id seperator.".into()))?
@@ -107,7 +126,7 @@ impl Requester {
 		Ok(&url[id_start..id_end])
 	}
 
-	async fn get_video_name<'a>(url: &'a str) -> Result<'_, &'a str> {
+	async fn get_video_name(url: &str) -> Result<&str> {
 		let slash_start = url
 			.rfind('/')
 			.ok_or_else(|| GenericError("Could not find video name start seperator.".into()))?
@@ -118,13 +137,13 @@ impl Requester {
 		Ok(&url[slash_start..slash_end])
 	}
 
-	pub async fn get_video_info(url: &str) -> Result<'_, VideoInfo<'_>> {
+	pub async fn get_video_info(url: &str) -> Result<VideoInfo<'_>> {
 		let name = Self::get_video_name(&url).await?;
 		let id = Self::get_video_id(&url).await?;
 		Ok(VideoInfo { name, id })
 	}
 
-	async fn construct_query_url(id: &str) -> Result<'_, String> {
+	async fn construct_query_url(id: &str) -> Result<String> {
 		const QUERY_URL_1: &str = "https://isl.dr-massive.com/api/account/items/";
 		const QUERY_URL_2: &str = "/videos?delivery=stream&device=web_browser&ff=idp%2Cldp%2Crpt&lang=da&resolution=HD-1080&sub=Anonymous";
 
@@ -135,7 +154,7 @@ impl Requester {
 		Ok(url)
 	}
 
-	fn parse_playlist_path_from_url(playlist_url: &str) -> Result<'_, String> {
+	fn parse_playlist_path_from_url(playlist_url: &str) -> Result<String> {
 		let split = playlist_url.split("drtv");
 		let trail = split.last().ok_or_else(|| {
 			GenericError("Could not get the last element of split in playlist url.".into())
@@ -145,7 +164,7 @@ impl Requester {
 		Ok(path)
 	}
 
-	pub async fn get_playlist_videos(&self, playlist_url: &str) -> Result<'_, Vec<String>> {
+	pub async fn get_playlist_videos(&self, playlist_url: &str) -> Result<Vec<String>> {
 		const PLAYLIST_INFO_URL_1: &str = "https://www.dr-massive.com/api/page?device=web_browser&ff=idp%2Cldp%2Crpt&geoLocation=dk&isDeviceAbroad=false&item_detail_expand=children&lang=da&list_page_size=24&max_list_prefetch=3&path=";
 		const PLAYLIST_INFO_URL_2: &str =
 			"&segments=drtv%2Coptedin&sub=Anonymous&text_entry_format=html";
@@ -180,10 +199,17 @@ impl Requester {
 	}
 
 	#[async_recursion::async_recursion]
-	pub async fn get_media_url<'b>(&mut self, video_id: &str) -> Result<'b, String> {
-		println!("Sending request...");
+	pub async fn get_media_url<'b>(&self, video_id: &str) -> Result<String> {
 		let url = Self::construct_query_url(video_id).await?;
-		let result = self.net.get(url).bearer_auth(&self.token).send().await?;
+
+		let token: Option<String>;
+		{
+			let mutex_val = self.token.lock().unwrap();
+			token = Some(mutex_val.clone());
+		}
+		let token = token.ok_or_else(|| GenericError("".into()))?;
+
+		let result = self.net.get(url).bearer_auth(token).send().await?;
 
 		let status = result.status();
 		if status == StatusCode::UNAUTHORIZED || status == StatusCode::FORBIDDEN {
