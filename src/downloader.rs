@@ -26,44 +26,16 @@ impl URLType {
 }
 
 pub struct Downloader {
-	video_num: u8,
 	requester: Requester,
 	converter: Converter,
 }
 
 impl Downloader {
 	pub fn new(requester: Requester, converter: Converter) -> Self {
-		let video_num = Downloader::get_video_num().unwrap_or(0);
 		Downloader {
-			video_num,
 			requester,
 			converter,
 		}
-	}
-
-	fn get_video_num<'a>() -> Result<'a, u8> {
-		let dir = std::fs::read_dir("./")?;
-		let mut largest_num = 0;
-		dir.for_each(|x| {
-			if let Ok(entry) = x {
-				let file_name = entry.file_name();
-				let to_str = file_name.into_string();
-				if let Ok(name) = to_str {
-					if !name.contains("video") {
-						return;
-					}
-
-					let split = name.rsplit('_').next().unwrap_or("0");
-					let dot_index = split.find('.').unwrap_or(1);
-					let num_str = &split[..dot_index];
-					let num = num_str.parse::<u8>().unwrap();
-					if num > largest_num {
-						largest_num = num;
-					}
-				}
-			}
-		});
-		Ok(largest_num)
 	}
 
 	async fn verify_url(url: &str) -> Result<'_, ()> {
@@ -104,17 +76,16 @@ impl Downloader {
 
 	async fn download_video(&mut self, video_url: &str, out_dir: &str) -> Result<'_, ()> {
 		println!("Downloading video...");
-		let id = Requester::get_video_id(video_url).await?;
-		let url = self.requester.get_media_url(id).await?;
+		let info = Requester::get_video_info(video_url).await?;
+		let url = self.requester.get_media_url(info.id).await?;
 		let content = Self::get_as_string(&url).await?;
 		let mut path = path::PathBuf::from(out_dir);
-		path.push(format!("./video_{}.mp4", self.video_num));
+		path.push(format!("./{}.mp4", info.name));
 		self.converter.convert(
 			content.as_bytes(),
 			path.to_str()
 				.ok_or_else(|| GenericError("Path was invalid.".into()))?,
 		)?;
-		self.video_num += 1;
 		Ok(())
 	}
 

@@ -7,6 +7,11 @@ use std::error::Error;
 type ErrorType = Box<dyn Error>;
 pub type Result<'a, T, E = ErrorType> = std::result::Result<T, E>;
 
+pub struct VideoInfo<'a> {
+	pub name: &'a str,
+	pub id: &'a str,
+}
+
 pub struct Requester {
 	net: Client,
 	token: String,
@@ -84,22 +89,39 @@ impl Requester {
 		Ok(())
 	}
 
-	pub async fn get_video_id(url: &str) -> Result<'_, &str> {
-		let index = url
+	async fn get_video_id<'a>(url: &'a str) -> Result<'_, &'a str> {
+		let id_start = url
 			.rfind('_')
 			.ok_or_else(|| GenericError("Could not find video id seperator.".into()))?
 			+ 1;
-		let mut end = url.len();
+		let mut id_end = url.len();
+		// Remove newline.
 		url.chars().rev().enumerate().for_each(|(i, ch)| {
 			if i > 2 {
 				return;
 			}
 			if ch == '\r' || ch == '\n' {
-				end -= 1;
+				id_end -= 1;
 			}
 		});
-		let id = &url[index..end];
-		Ok(id)
+		Ok(&url[id_start..id_end])
+	}
+
+	async fn get_video_name<'a>(url: &'a str) -> Result<'_, &'a str> {
+		let slash_start = url
+			.rfind('/')
+			.ok_or_else(|| GenericError("Could not find video name start seperator.".into()))?
+			+ 1;
+		let slash_end = url
+			.rfind('_')
+			.ok_or_else(|| GenericError("Could not find video name end seperator.".into()))?;
+		Ok(&url[slash_start..slash_end])
+	}
+
+	pub async fn get_video_info(url: &str) -> Result<'_, VideoInfo<'_>> {
+		let name = Self::get_video_name(&url).await?;
+		let id = Self::get_video_id(&url).await?;
+		Ok(VideoInfo { name, id })
 	}
 
 	async fn construct_query_url(id: &str) -> Result<'_, String> {
