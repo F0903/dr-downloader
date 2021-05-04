@@ -11,13 +11,13 @@ impl Display for GenericError {
 	}
 }
 
-impl Error for GenericError {}
-
 impl From<std::option::NoneError> for GenericError {
 	fn from(_err: std::option::NoneError) -> Self {
-		GenericError("Value was None.".into())
+		GenericError(String::from("Option contained no values."))
 	}
 }
+
+impl Error for GenericError {}
 
 impl From<&str> for GenericError {
 	fn from(val: &str) -> Self {

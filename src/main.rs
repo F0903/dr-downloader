@@ -12,6 +12,7 @@ mod error;
 #[macro_use]
 mod printutil;
 mod requester;
+mod util;
 
 #[cfg(all(windows, not(debug_assertions)))]
 mod win32;

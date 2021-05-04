@@ -1,5 +1,6 @@
 use crate::cacher::{cache_token, get_or_cache_token};
 use crate::error::{OkOrGeneric, Result};
+use crate::util::{find_char, remove_newline, rfind_char};
 use reqwest::{header, Client, StatusCode};
 use serde_json::Value;
 use std::sync::Arc;
@@ -91,29 +92,32 @@ impl Requester {
 	}
 
 	async fn get_video_id(url: &str) -> Result<&str> {
-		let id_start = url
+		let new_url = remove_newline(url);
+		let id_start = new_url
 			.rfind('_')
 			.ok_or_generic("Could not find video id seperator.")?
 			+ 1;
-		let mut id_end = url.len();
-		// Remove newline.
-		url.chars().rev().enumerate().for_each(|(i, ch)| {
-			if i > 2 {
-				return;
-			}
-			if ch == '\r' || ch == '\n' {
-				id_end -= 1;
-			}
-		});
-		Ok(&url[id_start..id_end])
+		let mut id_end = find_char(new_url, '/', id_start, new_url.len()).unwrap_or(0);
+		if id_end == 0 || id_end <= id_start {
+			id_end = new_url.len();
+		}
+		Ok(&new_url[id_start..id_end])
 	}
 
 	async fn get_video_name(url: &str) -> Result<&str> {
-		let slash_start = url
+		let new_url = remove_newline(url);
+		let mut name_start = new_url
 			.rfind('/')
 			.ok_or_generic("Could not find video name seperator.")?
 			+ 1;
-		Ok(&url[slash_start..])
+		if name_start == new_url.len() {
+			name_start = rfind_char(new_url, '/', 1, new_url.len() - 1)?;
+		}
+		let mut name_end = find_char(new_url, '/', name_start, new_url.len()).unwrap_or(0);
+		if name_end == 0 || name_end <= name_start {
+			name_end = new_url.len();
+		}
+		Ok(&new_url[name_start..name_end])
 	}
 
 	pub async fn get_video_info(url: &str) -> Result<VideoInfo<'_>> {
