@@ -2,7 +2,8 @@ use crate::cacher::{cache_token, get_or_cache_token};
 use crate::error::{OkOrGeneric, Result};
 use reqwest::{header, Client, StatusCode};
 use serde_json::Value;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 pub struct VideoInfo<'a> {
 	pub name: &'a str,
@@ -52,21 +53,13 @@ impl Requester {
 	}
 
 	async fn refresh_token(&self) -> Result<()> {
-		let token: Option<String>;
-		{
-			let token_lock = self.token.try_lock().ok();
-			if token_lock.is_none() {
-				// If token is locked. (already refreshing)
-				let lock = self.token.lock().unwrap();
-				drop(lock);
-				return Ok(());
-			}
-			{
-				let guard = token_lock.unwrap();
-				token = Some(guard.clone());
-			}
+		let lock_result = self.token.try_lock();
+		if lock_result.is_err() {
+			// If token is locked. (already refreshing)
+			let _lock = self.token.lock().await; // Wait for refresh
+			return Ok(());
 		}
-		let token = token.unwrap();
+		let mut token = lock_result.unwrap();
 
 		println!("Refreshing auth token...");
 		const REFRESH_ENDPOINT: &str =
@@ -91,10 +84,8 @@ impl Requester {
 		let val = json["value"]
 			.as_str()
 			.ok_or_generic("Could not get JSON value.")?;
-		let token = val;
-		cache_token(&token).ok();
-		let mut token_ref = self.token.lock().unwrap();
-		*token_ref = token.to_owned();
+		cache_token(&val).ok();
+		*token = val.to_owned();
 		println!("Refreshed auth token. Resuming...");
 		Ok(())
 	}
@@ -120,12 +111,9 @@ impl Requester {
 	async fn get_video_name(url: &str) -> Result<&str> {
 		let slash_start = url
 			.rfind('/')
-			.ok_or_generic("Could not find video name start seperator.")?
+			.ok_or_generic("Could not find video name seperator.")?
 			+ 1;
-		let slash_end = url
-			.rfind('_')
-			.ok_or_generic("Could not find video name end seperator.")?;
-		Ok(&url[slash_start..slash_end])
+		Ok(&url[slash_start..])
 	}
 
 	pub async fn get_video_info(url: &str) -> Result<VideoInfo<'_>> {
@@ -192,14 +180,7 @@ impl Requester {
 	#[async_recursion::async_recursion]
 	pub async fn get_media_url<'b>(&self, video_id: &str) -> Result<String> {
 		let url = Self::construct_query_url(video_id).await?;
-
-		let token: Option<String>;
-		{
-			let mutex_val = self.token.lock().unwrap();
-			token = Some(mutex_val.clone());
-		}
-		let token = token.ok_or_generic("Could not get token from mutex.")?;
-
+		let token = self.token.lock().await;
 		let result = self.net.get(url).bearer_auth(token).send().await?;
 
 		let status = result.status();

@@ -7,7 +7,7 @@ pub enum URLType {
 
 impl URLType {
 	pub fn get(url: &str) -> Result<URLType> {
-		if url.contains("saeson") {
+		if url.contains("saeson") || url.contains("serie") {
 			return Ok(URLType::Playlist);
 		} else if url.contains("episode") || url.contains("se") {
 			return Ok(URLType::Video);
