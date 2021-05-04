@@ -17,7 +17,7 @@ mod requester;
 mod win32;
 
 use downloader::Downloader;
-use requester::Result;
+use error::Result;
 use std::io::stdin;
 
 macro_rules! do_while {

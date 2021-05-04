@@ -1,21 +1,8 @@
-use std::error::Error;
-use std::fmt::{self, Display, Formatter};
+pub mod generic_error;
+pub mod ok_or_generic;
 
-#[derive(Debug)]
-pub struct GenericError(pub String);
+pub use generic_error::GenericError;
+pub use ok_or_generic::OkOrGeneric;
 
-impl Display for GenericError {
-	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-		f.write_str(&self.0)
-	}
-}
-
-impl Error for GenericError {}
-
-impl std::convert::From<std::option::NoneError> for GenericError {
-	fn from(_err: std::option::NoneError) -> Self {
-		GenericError("Value was None.".into())
-	}
-}
-
-unsafe impl Send for GenericError {}
+type ErrorType = Box<dyn std::error::Error>;
+pub type Result<T, E = ErrorType> = std::result::Result<T, E>;

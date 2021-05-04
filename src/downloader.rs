@@ -1,28 +1,15 @@
+mod urltype;
+
 use crate::converter::Converter;
-use crate::error::GenericError;
-use crate::requester::{Requester, Result};
+use crate::error::{OkOrGeneric, Result};
+use crate::requester::Requester;
 use reqwest::StatusCode;
 use std::path;
+use urltype::URLType;
 
 lazy_static! {
 	static ref DR_VID_URL_REGEX: regex::Regex =
 		regex::Regex::new(r#"(((https)|(http))(://www\.dr\.dk/drtv/)).*_\d+"#).unwrap();
-}
-
-enum URLType {
-	Video,
-	Playlist,
-}
-
-impl URLType {
-	pub fn get(url: &str) -> Result<URLType> {
-		if url.contains("saeson") {
-			return Ok(URLType::Playlist);
-		} else if url.contains("episode") || url.contains("se") {
-			return Ok(URLType::Video);
-		}
-		Err("Could not parse URL Type.".into())
-	}
 }
 
 pub struct Downloader {
@@ -49,9 +36,7 @@ impl Downloader {
 		let result = reqwest::get(url).await?;
 		let status = result.status();
 		if status != StatusCode::OK {
-			return Err(
-				GenericError(format!("Status code was not 200 OK.\nCode: {}", status)).into(),
-			);
+			return Err(format!("Status code was not 200 OK.\nCode: {}", status).into());
 		}
 		let text = result.text().await?;
 		Ok(text)
@@ -96,8 +81,7 @@ impl Downloader {
 		path.push(format!("./{}.mp4", info.name));
 		self.converter.convert(
 			content.as_bytes(),
-			path.to_str()
-				.ok_or_else(|| GenericError("Path was invalid.".into()))?,
+			path.to_str().ok_or_generic("Path was invalid.")?,
 		)?;
 		Ok(())
 	}

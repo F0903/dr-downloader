@@ -1,12 +1,8 @@
 use crate::cacher::{cache_token, get_or_cache_token};
-use crate::error::GenericError;
+use crate::error::{OkOrGeneric, Result};
 use reqwest::{header, Client, StatusCode};
 use serde_json::Value;
-use std::error::Error;
 use std::sync::{Arc, Mutex};
-
-type ErrorType = Box<dyn Error>;
-pub type Result<T, E = ErrorType> = std::result::Result<T, E>;
 
 pub struct VideoInfo<'a> {
 	pub name: &'a str,
@@ -43,19 +39,15 @@ impl Requester {
 
 		let status = response.status();
 		if status != StatusCode::OK {
-			return Err(
-				GenericError(format!("Status code was not 200 OK.\nCode: {}", &status)).into(),
-			);
+			return Err(format!("Status code was not 200 OK.\nCode: {}", &status).into());
 		}
 
 		let text = response.text().await?;
 		let json = serde_json::from_str::<serde_json::Value>(&text)?;
-		let root = json
-			.get(0)
-			.ok_or_else(|| GenericError("Could not get JSON value.".into()))?;
+		let root = json.get(0).ok_or_generic("Could not get JSON value.")?;
 		let token = root["value"]
 			.as_str()
-			.ok_or_else(|| GenericError("Could not get JSON value as str.".into()))?;
+			.ok_or_generic("Could not get JSON value as str.")?;
 		Ok(token.into())
 	}
 
@@ -91,16 +83,14 @@ impl Requester {
 
 		let status = response.status();
 		if status != StatusCode::OK {
-			return Err(
-				GenericError(format!("Status code was not 200 OK.\nCode: {}", status)).into(),
-			);
+			return Err(format!("Status code was not 200 OK.\nCode: {}", status).into());
 		}
 
 		let text = response.text().await?;
 		let json = serde_json::from_str::<serde_json::Value>(&text)?;
 		let val = json["value"]
 			.as_str()
-			.ok_or_else(|| GenericError("Could not get JSON value.".into()))?;
+			.ok_or_generic("Could not get JSON value.")?;
 		let token = val;
 		cache_token(&token).ok();
 		let mut token_ref = self.token.lock().unwrap();
@@ -112,7 +102,7 @@ impl Requester {
 	async fn get_video_id(url: &str) -> Result<&str> {
 		let id_start = url
 			.rfind('_')
-			.ok_or_else(|| GenericError("Could not find video id seperator.".into()))?
+			.ok_or_generic("Could not find video id seperator.")?
 			+ 1;
 		let mut id_end = url.len();
 		// Remove newline.
@@ -130,11 +120,11 @@ impl Requester {
 	async fn get_video_name(url: &str) -> Result<&str> {
 		let slash_start = url
 			.rfind('/')
-			.ok_or_else(|| GenericError("Could not find video name start seperator.".into()))?
+			.ok_or_generic("Could not find video name start seperator.")?
 			+ 1;
 		let slash_end = url
 			.rfind('_')
-			.ok_or_else(|| GenericError("Could not find video name end seperator.".into()))?;
+			.ok_or_generic("Could not find video name end seperator.")?;
 		Ok(&url[slash_start..slash_end])
 	}
 
@@ -157,9 +147,9 @@ impl Requester {
 
 	fn parse_playlist_path_from_url(playlist_url: &str) -> Result<String> {
 		let split = playlist_url.split("drtv");
-		let trail = split.last().ok_or_else(|| {
-			GenericError("Could not get the last element of split in playlist url.".into())
-		})?;
+		let trail = split
+			.last()
+			.ok_or_generic("Could not get the last element of split in playlist url.")?;
 		let path = trail.replace('/', "%2F");
 		let path = path.replace(' ', "%20");
 		Ok(path)
@@ -187,7 +177,7 @@ impl Requester {
 
 		let eps = eps_root
 			.as_array()
-			.ok_or_else(|| GenericError("Could not convert eps_root to an array.".into()))?;
+			.ok_or_generic("Could not convert eps_root to an array.")?;
 		let ep_links = eps
 			.iter()
 			.map(|x| {
@@ -208,7 +198,7 @@ impl Requester {
 			let mutex_val = self.token.lock().unwrap();
 			token = Some(mutex_val.clone());
 		}
-		let token = token.ok_or_else(|| GenericError("".into()))?;
+		let token = token.ok_or_generic("Could not get token from mutex.")?;
 
 		let result = self.net.get(url).bearer_auth(token).send().await?;
 
@@ -218,19 +208,15 @@ impl Requester {
 			return self.get_media_url(video_id).await;
 		}
 		if status != StatusCode::OK {
-			return Err(
-				GenericError(format!("Status code was not 200 OK.\nCode: {}", status)).into(),
-			);
+			return Err(format!("Status code was not 200 OK.\nCode: {}", status).into());
 		}
 
 		let text = result.text().await?;
 		let json: Value = serde_json::from_str(&text)?;
-		let root = json
-			.get(0)
-			.ok_or_else(|| GenericError("Could not get JSON value.".into()))?;
+		let root = json.get(0).ok_or_generic("Could not get JSON value.")?;
 		let url = root["url"]
 			.as_str()
-			.ok_or_else(|| GenericError("Could not get 'url' from root as str.".into()))?;
+			.ok_or_generic("Could not get 'url' from root as str.")?;
 		Ok(String::from(url))
 	}
 }
