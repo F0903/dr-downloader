@@ -1,7 +1,10 @@
 [![Rust](https://github.com/F0903/dr-downloader/actions/workflows/rust.yml/badge.svg?branch=master)](https://github.com/F0903/dr-downloader/actions/workflows/rust.yml)
 # dr-downloader
 A downloader that downloads media from DR (Denmarks Radio) in parallel, and converts them to convenient MP4 files.
-To use, simply paste in an episode or season url from DRTV.
+
+To use, simply paste in an episode or season URL from DRTV.
+
+If you'd rather use it with command-line arguments (for example, from another program), it is possible to pass in the URL as would with any other program from the command line, and the program will gracefully shut down once the download is done.
 
 Note: 
 This program will most likely only work in Denmark, as DR has restrictions on who can access their content.
