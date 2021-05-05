@@ -26,7 +26,7 @@ jobs:
       run: cargo +nightly build --verbose --release
     
     - name: Run tests
-      run: cargo +nightly test --verbose
+      run: cargo +nightly test --verbose -p ${{ github.event.repository.name }}
       
     - name: Upload binary
       uses: actions/upload-artifact@v2.2.3
