@@ -6,7 +6,7 @@ use serde_json::Value;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-pub struct VideoInfo<'a> {
+pub struct EpisodeInfo<'a> {
 	pub name: &'a str,
 	pub id: &'a str,
 }
@@ -87,15 +87,15 @@ impl Requester {
 			.ok_or_generic("Could not get JSON value.")?;
 		cache_token(&val).ok();
 		*token = val.to_owned();
-		println!("Refreshed auth token. Resuming...");
+		println!("Refreshed auth token.\nResuming...");
 		Ok(())
 	}
 
-	async fn get_video_id(url: &str) -> Result<&str> {
+	async fn get_episode_id(url: &str) -> Result<&str> {
 		let new_url = remove_newline(url);
 		let id_start = new_url
 			.rfind('_')
-			.ok_or_generic("Could not find video id seperator.")?
+			.ok_or_generic("Could not find episode id seperator.")?
 			+ 1;
 		let mut id_end = find_char(new_url, '/', id_start, new_url.len()).unwrap_or(0);
 		if id_end == 0 || id_end <= id_start {
@@ -104,11 +104,11 @@ impl Requester {
 		Ok(&new_url[id_start..id_end])
 	}
 
-	async fn get_video_name(url: &str) -> Result<&str> {
+	async fn get_episode_name(url: &str) -> Result<&str> {
 		let new_url = remove_newline(url);
 		let mut name_start = new_url
 			.rfind('/')
-			.ok_or_generic("Could not find video name seperator.")?
+			.ok_or_generic("Could not find episode name seperator.")?
 			+ 1;
 		if name_start == new_url.len() {
 			name_start = rfind_char(new_url, '/', 1, new_url.len() - 1)?;
@@ -120,10 +120,10 @@ impl Requester {
 		Ok(&new_url[name_start..name_end])
 	}
 
-	pub async fn get_video_info(url: &str) -> Result<VideoInfo<'_>> {
-		let name = Self::get_video_name(&url).await?;
-		let id = Self::get_video_id(&url).await?;
-		Ok(VideoInfo { name, id })
+	pub async fn get_episode_info(url: &str) -> Result<EpisodeInfo<'_>> {
+		let name = Self::get_episode_name(&url).await?;
+		let id = Self::get_episode_id(&url).await?;
+		Ok(EpisodeInfo { name, id })
 	}
 
 	async fn construct_query_url(id: &str) -> Result<String> {
@@ -137,17 +137,17 @@ impl Requester {
 		Ok(url)
 	}
 
-	fn parse_playlist_path_from_url(playlist_url: &str) -> Result<String> {
+	fn parse_show_path_from_url(playlist_url: &str) -> Result<String> {
 		let split = playlist_url.split("drtv");
 		let trail = split
 			.last()
-			.ok_or_generic("Could not get the last element of split in playlist url.")?;
+			.ok_or_generic("Could not get the last element of split in show url.")?;
 		let path = trail.replace('/', "%2F");
 		let path = path.replace(' ', "%20");
 		Ok(path)
 	}
 
-	pub async fn get_playlist_videos(&self, playlist_url: &str) -> Result<Vec<String>> {
+	pub async fn get_show_episodes(&self, playlist_url: &str) -> Result<Vec<String>> {
 		const PLAYLIST_INFO_URL_1: &str = "https://www.dr-massive.com/api/page?device=web_browser&ff=idp%2Cldp%2Crpt&geoLocation=dk&isDeviceAbroad=false&item_detail_expand=children&lang=da&list_page_size=24&max_list_prefetch=3&path=";
 		const PLAYLIST_INFO_URL_2: &str =
 			"&segments=drtv%2Coptedin&sub=Anonymous&text_entry_format=html";
@@ -155,7 +155,7 @@ impl Requester {
 		let mut url = String::with_capacity(
 			PLAYLIST_INFO_URL_1.len() + playlist_url.len() / 2 + PLAYLIST_INFO_URL_2.len(),
 		);
-		let path = Self::parse_playlist_path_from_url(playlist_url)?;
+		let path = Self::parse_show_path_from_url(playlist_url)?;
 		url.push_str(PLAYLIST_INFO_URL_1);
 		url.push_str(&path);
 		url.push_str(PLAYLIST_INFO_URL_2);
