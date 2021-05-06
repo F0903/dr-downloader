@@ -19,10 +19,10 @@ impl Converter {
 	}
 
 	pub fn convert(&self, data: &[u8], out_path: impl AsRef<str>) -> Result<()> {
-		let out = out_path.as_ref();
-		std::fs::write(out, "")?; // Create file first otherwise canonicalize wont work.
-		let out = std::fs::canonicalize(out)?;
-		let out = out.to_str().ok_or(ErrorKind::NotFound)?;
+		let out_path = out_path.as_ref();
+		std::fs::write(out_path, "")?; // Create file first otherwise canonicalize wont work.
+		let out_path = std::fs::canonicalize(out_path)?;
+		let out_path = out_path.to_str().ok_or(ErrorKind::NotFound)?;
 		let mut proc = Command::new(&self.ffmpeg_path)
 			.args(&[
 				"-y",
@@ -35,7 +35,7 @@ impl Converter {
 				"pipe:0",
 				"-c",
 				"copy",
-				out,
+				out_path,
 			])
 			.stdin(Stdio::piped())
 			.stderr(Stdio::inherit())
