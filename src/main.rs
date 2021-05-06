@@ -51,10 +51,10 @@ async fn main() -> Result<()> {
 	#[cfg(all(windows, not(debug_assertions)))]
 	win32::set_virtual_console_mode();
 
-	let downloader = Box::leak::<'static>(Box::new(Downloader::new(
+	let downloader = Downloader::new(
 		requester::Requester::new().await?,
 		converter::Converter::new()?,
-	)));
+	);
 
 	let mut args = std::env::args();
 	let input_mode = args.len() <= 1;

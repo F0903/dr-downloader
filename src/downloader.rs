@@ -4,6 +4,7 @@ use crate::converter::Converter;
 use crate::error::{OkOrGeneric, Result};
 use crate::requester::Requester;
 use crate::util::remove_newline;
+use rayon::prelude::*;
 use reqwest::StatusCode;
 use std::path;
 use urltype::URLType;
@@ -43,25 +44,18 @@ impl Downloader {
 		Ok(text)
 	}
 
-	async fn download_show(
-		&'static self,
-		show_url: impl AsRef<str>,
-		out_dir: impl ToString,
-	) -> Result<()> {
+	async fn download_show(&self, show_url: impl AsRef<str>, out_dir: impl ToString) -> Result<()> {
 		println!("Downloading show...");
 		let eps = self.requester.get_show_episodes(show_url.as_ref()).await?;
-		let mut tasks = vec![];
-		for ep in eps {
-			let dir = out_dir.to_string();
-			tasks.push(tokio::spawn(async move {
-				let result = self.download_episode(&ep, dir).await;
-				match result {
-					Ok(_) => println!("Download of {} succeeded.", ep),
-					Err(_) => println!("Download of {} failed.", ep),
-				}
-			}));
-		}
-		futures::future::join_all(tasks).await;
+		let dir = out_dir.to_string();
+		let rt = tokio::runtime::Handle::current();
+		eps.par_iter().for_each(|ep| {
+			let result = rt.block_on(self.download_episode(&ep, &dir));
+			match result {
+				Ok(_) => println!("Download of {} succeeded.", ep),
+				Err(_) => println!("Download of {} failed.", ep),
+			}
+		});
 		Ok(())
 	}
 
@@ -88,11 +82,7 @@ impl Downloader {
 		url
 	}
 
-	pub async fn download(
-		&'static self,
-		out_dir: impl AsRef<str>,
-		url: impl AsRef<str>,
-	) -> Result<()> {
+	pub async fn download(&self, out_dir: impl AsRef<str>, url: impl AsRef<str>) -> Result<()> {
 		let url = Self::sanitize_url(url.as_ref()).await;
 		Downloader::verify_url(url).await?;
 		let url_type = URLType::get(url)?;

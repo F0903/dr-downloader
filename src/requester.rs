@@ -87,7 +87,7 @@ impl Requester {
 			.ok_or_generic("Could not get JSON value.")?;
 		cache_token(&val).ok();
 		*token = val.to_owned();
-		println!("Refreshed auth token.\nResuming...");
+		println!("Refreshed auth token\nResuming...");
 		Ok(())
 	}
 
