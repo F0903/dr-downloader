@@ -33,7 +33,7 @@ macro_rules! do_while {
 }
 
 fn clear_console() {
-	print!("\x1B[2J\x1B[1;1H");
+	fprint!("\x1B[2J\x1B[1;1H");
 }
 
 fn log_error(err: impl AsRef<dyn std::error::Error>) {

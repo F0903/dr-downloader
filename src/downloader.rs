@@ -3,6 +3,7 @@ mod urltype;
 use crate::converter::Converter;
 use crate::error::{OkOrGeneric, Result};
 use crate::requester::Requester;
+use crate::util::remove_newline;
 use reqwest::StatusCode;
 use std::path;
 use urltype::URLType;
@@ -82,16 +83,22 @@ impl Downloader {
 		Ok(())
 	}
 
+	async fn sanitize_url(mut url: &str) -> &str {
+		url = remove_newline(url);
+		url
+	}
+
 	pub async fn download(
 		&'static self,
 		out_dir: impl AsRef<str>,
 		url: impl AsRef<str>,
 	) -> Result<()> {
-		Downloader::verify_url(url.as_ref()).await?;
-		let url_type = URLType::get(url.as_ref())?;
+		let url = Self::sanitize_url(url.as_ref()).await;
+		Downloader::verify_url(url).await?;
+		let url_type = URLType::get(url)?;
 		match url_type {
-			URLType::Playlist => self.download_show(url.as_ref(), out_dir.as_ref()).await,
-			URLType::Video => self.download_episode(url.as_ref(), out_dir).await,
+			URLType::Playlist => self.download_show(url, out_dir.as_ref()).await,
+			URLType::Video => self.download_episode(url, out_dir).await,
 		}
 	}
 }

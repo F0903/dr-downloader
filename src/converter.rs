@@ -5,7 +5,7 @@ use std::process::{Command, Stdio};
 const FFMPEG: &[u8] = include_bytes!("../ffmpeg-win32.exe");
 
 pub struct Converter {
-	ffmpeg_path: Option<String>,
+	ffmpeg_path: String,
 }
 
 impl Converter {
@@ -14,24 +14,23 @@ impl Converter {
 		let dir_str = dir.to_str().ok_or(ErrorKind::InvalidData)?;
 		fs::write(&dir_str, FFMPEG)?;
 		Ok(Converter {
-			ffmpeg_path: Some(dir_str.to_owned()),
+			ffmpeg_path: dir_str.to_owned(),
 		})
 	}
 
 	pub fn convert(&self, data: &[u8], out_path: impl AsRef<str>) -> Result<()> {
-		let ffmpeg_path = self.ffmpeg_path.as_ref().ok_or(ErrorKind::NotFound)?;
 		let out = out_path.as_ref();
 		std::fs::write(out, "")?; // Create file first otherwise canonicalize wont work.
 		let out = std::fs::canonicalize(out)?;
 		let out = out.to_str().ok_or(ErrorKind::NotFound)?;
-		let mut proc = Command::new(ffmpeg_path)
+		let mut proc = Command::new(&self.ffmpeg_path)
 			.args(&[
 				"-y",
 				"-hide_banner",
 				"-loglevel",
 				"panic",
 				"-protocol_whitelist",
-				"http,https,tcp,tls,crypto,data,file,pipe",
+				"http,https,tcp,tls,crypto,pipe",
 				"-i",
 				"pipe:0",
 				"-c",

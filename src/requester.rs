@@ -1,6 +1,6 @@
 use crate::cacher::{cache_token, get_or_cache_token};
 use crate::error::{OkOrGeneric, Result};
-use crate::util::{find_char, remove_newline, rfind_char};
+use crate::util::{find_char, rfind_char};
 use reqwest::{header, Client, StatusCode};
 use serde_json::Value;
 use std::sync::Arc;
@@ -92,32 +92,30 @@ impl Requester {
 	}
 
 	async fn get_episode_id(url: &str) -> Result<&str> {
-		let new_url = remove_newline(url);
-		let id_start = new_url
+		let id_start = url
 			.rfind('_')
 			.ok_or_generic("Could not find episode id seperator.")?
 			+ 1;
-		let mut id_end = find_char(new_url, '/', id_start, new_url.len()).unwrap_or(0);
+		let mut id_end = find_char(url, '/', id_start, url.len()).unwrap_or(0);
 		if id_end == 0 || id_end <= id_start {
-			id_end = new_url.len();
+			id_end = url.len();
 		}
-		Ok(&new_url[id_start..id_end])
+		Ok(&url[id_start..id_end])
 	}
 
 	async fn get_episode_name(url: &str) -> Result<&str> {
-		let new_url = remove_newline(url);
-		let mut name_start = new_url
+		let mut name_start = url
 			.rfind('/')
 			.ok_or_generic("Could not find episode name seperator.")?
 			+ 1;
-		if name_start == new_url.len() {
-			name_start = rfind_char(new_url, '/', 1, new_url.len() - 1)?;
+		if name_start == url.len() {
+			name_start = rfind_char(url, '/', 1, url.len() - 1)?;
 		}
-		let mut name_end = find_char(new_url, '/', name_start, new_url.len()).unwrap_or(0);
+		let mut name_end = find_char(url, '/', name_start, url.len()).unwrap_or(0);
 		if name_end == 0 || name_end <= name_start {
-			name_end = new_url.len();
+			name_end = url.len();
 		}
-		Ok(&new_url[name_start..name_end])
+		Ok(&url[name_start..name_end])
 	}
 
 	pub async fn get_episode_info(url: &str) -> Result<EpisodeInfo<'_>> {
