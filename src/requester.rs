@@ -118,25 +118,19 @@ impl Requester {
 		Ok(&url[name_start..name_end])
 	}
 
-	pub async fn get_episode_info(url: &str) -> Result<EpisodeInfo<'_>> {
-		let name = Self::get_episode_name(&url).await?;
-		let id = Self::get_episode_id(&url).await?;
-		Ok(EpisodeInfo { name, id })
-	}
-
-	async fn construct_query_url(id: &str) -> Result<String> {
-		const QUERY_URL_1: &str = "https://isl.dr-massive.com/api/account/items/";
-		const QUERY_URL_2: &str = "/videos?delivery=stream&device=web_browser&ff=idp%2Cldp%2Crpt&lang=da&resolution=HD-1080&sub=Anonymous";
-
-		let mut url = String::with_capacity(QUERY_URL_1.len() + id.len() + QUERY_URL_2.len());
-		url.push_str(QUERY_URL_1);
-		url.push_str(id);
-		url.push_str(QUERY_URL_2);
+	fn construct_ep_query_url(id: &str) -> Result<String> {
+		let url = format!("https://isl.dr-massive.com/api/account/items/{}/videos?delivery=stream&device=web_browser&ff=idp%2Cldp%2Crpt&lang=da&resolution=HD-1080&sub=Anonymous", id);
 		Ok(url)
 	}
 
-	fn parse_show_path_from_url(playlist_url: &str) -> Result<String> {
-		let split = playlist_url.split("drtv");
+	fn construct_show_query_url(show_path: &str) -> Result<String> {
+		let path = Self::parse_show_path_from_url(show_path)?;
+		let url = format!("https://www.dr-massive.com/api/page?device=web_browser&ff=idp%2Cldp%2Crpt&geoLocation=dk&isDeviceAbroad=false&item_detail_expand=children&lang=da&list_page_size=24&max_list_prefetch=3&path={}&segments=drtv%2Coptedin&sub=Anonymous&text_entry_format=html", path);
+		Ok(url)
+	}
+
+	fn parse_show_path_from_url(show_url: &str) -> Result<String> {
+		let split = show_url.split("drtv");
 		let trail = split
 			.last()
 			.ok_or_generic("Could not get the last element of split in show url.")?;
@@ -145,19 +139,14 @@ impl Requester {
 		Ok(path)
 	}
 
-	pub async fn get_show_episodes(&self, playlist_url: &str) -> Result<Vec<String>> {
-		const PLAYLIST_INFO_URL_1: &str = "https://www.dr-massive.com/api/page?device=web_browser&ff=idp%2Cldp%2Crpt&geoLocation=dk&isDeviceAbroad=false&item_detail_expand=children&lang=da&list_page_size=24&max_list_prefetch=3&path=";
-		const PLAYLIST_INFO_URL_2: &str =
-			"&segments=drtv%2Coptedin&sub=Anonymous&text_entry_format=html";
+	pub async fn get_episode_info(url: &str) -> Result<EpisodeInfo<'_>> {
+		let name = Self::get_episode_name(&url).await?;
+		let id = Self::get_episode_id(&url).await?;
+		Ok(EpisodeInfo { name, id })
+	}
 
-		let mut url = String::with_capacity(
-			PLAYLIST_INFO_URL_1.len() + playlist_url.len() / 2 + PLAYLIST_INFO_URL_2.len(),
-		);
-		let path = Self::parse_show_path_from_url(playlist_url)?;
-		url.push_str(PLAYLIST_INFO_URL_1);
-		url.push_str(&path);
-		url.push_str(PLAYLIST_INFO_URL_2);
-
+	pub async fn get_show_episodes(&self, show_url: &str) -> Result<Vec<String>> {
+		let url = Self::construct_show_query_url(show_url)?;
 		let response = self.net.get(url).send().await?;
 		let text = response.text().await?;
 		let json: Value = serde_json::from_str(&text)?;
@@ -180,15 +169,15 @@ impl Requester {
 	}
 
 	#[async_recursion::async_recursion]
-	pub async fn get_media_url<'b>(&self, video_id: &str) -> Result<String> {
-		let url = Self::construct_query_url(video_id).await?;
+	pub async fn get_episode_url<'b>(&self, ep_id: &str) -> Result<String> {
+		let url = Self::construct_ep_query_url(ep_id)?;
 		let token = self.token.lock().await;
 		let result = self.net.get(url).bearer_auth(token).send().await?;
 
 		let status = result.status();
 		if status == StatusCode::UNAUTHORIZED || status == StatusCode::FORBIDDEN {
 			self.refresh_token().await?;
-			return self.get_media_url(video_id).await;
+			return self.get_episode_url(ep_id).await;
 		}
 		if status != StatusCode::OK {
 			return Err(format!("Status code was not 200 OK.\nCode: {}", status).into());
@@ -197,9 +186,9 @@ impl Requester {
 		let text = result.text().await?;
 		let json: Value = serde_json::from_str(&text)?;
 		let root = json.get(0).ok_or_generic("Could not get JSON value.")?;
-		let url = root["url"]
+		let ep_url = root["url"]
 			.as_str()
 			.ok_or_generic("Could not get 'url' from root as str.")?;
-		Ok(String::from(url))
+		Ok(ep_url.to_owned())
 	}
 }

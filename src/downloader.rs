@@ -67,7 +67,7 @@ impl Downloader {
 	async fn download_episode(&self, ep_url: &str, out_dir: &str) -> Result<()> {
 		println!("Downloading episode {}", ep_url);
 		let info = Requester::get_episode_info(ep_url).await?;
-		let url = self.requester.get_media_url(info.id).await?;
+		let url = self.requester.get_episode_url(info.id).await?;
 		let content = Self::get_as_string(&url).await?;
 		let mut path = path::PathBuf::from(out_dir);
 		path.push(format!("./{}.mp4", info.name));
@@ -78,14 +78,14 @@ impl Downloader {
 		Ok(())
 	}
 
-	async fn sanitize_url(mut url: &str) -> &str {
+	fn sanitize_url(mut url: &str) -> &str {
 		url = remove_newline(url);
 		url
 	}
 
 	pub async fn download(&self, out_dir: impl AsRef<str>, url: impl AsRef<str>) -> Result<()> {
 		let out_dir = out_dir.as_ref();
-		let url = Self::sanitize_url(url.as_ref()).await;
+		let url = Self::sanitize_url(url.as_ref());
 		Downloader::verify_url(url).await?;
 		let url_type = URLType::get(url)?;
 		match url_type {
