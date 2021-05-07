@@ -91,40 +91,8 @@ impl Requester {
 		Ok(())
 	}
 
-	async fn get_episode_id(url: &str) -> Result<&str> {
-		let id_start = url
-			.rfind('_')
-			.ok_or_generic("Could not find episode id seperator.")?
-			+ 1;
-		let mut id_end = find_char(url, '/', id_start, url.len()).unwrap_or(0);
-		if id_end == 0 || id_end <= id_start {
-			id_end = url.len();
-		}
-		Ok(&url[id_start..id_end])
-	}
-
-	async fn get_episode_name(url: &str) -> Result<&str> {
-		let mut name_start = url
-			.rfind('/')
-			.ok_or_generic("Could not find episode name seperator.")?
-			+ 1;
-		if name_start == url.len() {
-			name_start = rfind_char(url, '/', 1, url.len() - 1)?;
-		}
-		let mut name_end = find_char(url, '/', name_start, url.len()).unwrap_or(0);
-		if name_end == 0 || name_end <= name_start {
-			name_end = url.len();
-		}
-		Ok(&url[name_start..name_end])
-	}
-
-	fn construct_ep_query_url(id: &str) -> Result<String> {
-		let url = format!("https://isl.dr-massive.com/api/account/items/{}/videos?delivery=stream&device=web_browser&ff=idp%2Cldp%2Crpt&lang=da&resolution=HD-1080&sub=Anonymous", id);
-		Ok(url)
-	}
-
-	fn construct_show_query_url(show_path: &str) -> Result<String> {
-		let path = Self::parse_show_path_from_url(show_path)?;
+	fn construct_show_query_url(show_url: &str) -> Result<String> {
+		let path = Self::parse_show_path_from_url(show_url)?;
 		let url = format!("https://www.dr-massive.com/api/page?device=web_browser&ff=idp%2Cldp%2Crpt&geoLocation=dk&isDeviceAbroad=false&item_detail_expand=children&lang=da&list_page_size=24&max_list_prefetch=3&path={}&segments=drtv%2Coptedin&sub=Anonymous&text_entry_format=html", path);
 		Ok(url)
 	}
@@ -139,9 +107,41 @@ impl Requester {
 		Ok(path)
 	}
 
+	async fn construct_ep_query_url(ep_id: &str) -> Result<String> {
+		let url = format!("https://isl.dr-massive.com/api/account/items/{}/videos?delivery=stream&device=web_browser&ff=idp%2Cldp%2Crpt&lang=da&resolution=HD-1080&sub=Anonymous", ep_id);
+		Ok(url)
+	}
+
+	async fn parse_episode_name(url: &str) -> Result<&str> {
+		let mut name_start = url
+			.rfind('/')
+			.ok_or_generic("Could not find episode name seperator.")?
+			+ 1;
+		if name_start == url.len() {
+			name_start = rfind_char(url, '/', 1, url.len() - 1)?;
+		}
+		let mut name_end = find_char(url, '/', name_start, url.len()).unwrap_or(0);
+		if name_end == 0 || name_end <= name_start {
+			name_end = url.len();
+		}
+		Ok(&url[name_start..name_end])
+	}
+
+	async fn parse_episode_id(url: &str) -> Result<&str> {
+		let id_start = url
+			.rfind('_')
+			.ok_or_generic("Could not find episode id seperator.")?
+			+ 1;
+		let mut id_end = find_char(url, '/', id_start, url.len()).unwrap_or(0);
+		if id_end == 0 || id_end <= id_start {
+			id_end = url.len();
+		}
+		Ok(&url[id_start..id_end])
+	}
+
 	pub async fn get_episode_info(url: &str) -> Result<EpisodeInfo<'_>> {
-		let name = Self::get_episode_name(&url).await?;
-		let id = Self::get_episode_id(&url).await?;
+		let (name, id) =
+			tokio::try_join!(Self::parse_episode_name(&url), Self::parse_episode_id(&url))?;
 		Ok(EpisodeInfo { name, id })
 	}
 
@@ -170,7 +170,7 @@ impl Requester {
 
 	#[async_recursion::async_recursion]
 	pub async fn get_episode_url<'b>(&self, ep_id: &str) -> Result<String> {
-		let url = Self::construct_ep_query_url(ep_id)?;
+		let url = Self::construct_ep_query_url(ep_id).await?;
 		let token = self.token.lock().await;
 		let result = self.net.get(url).bearer_auth(token).send().await?;
 
