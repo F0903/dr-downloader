@@ -127,7 +127,7 @@ dependencies = [
 
 [[package]]
 name = "dr-downloader"
-version = "0.3.0"
+version = "1.0.0"
 dependencies = [
  "async-recursion",
  "futures",

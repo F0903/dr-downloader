@@ -1,8 +1,10 @@
 [package]
 name = "dr-downloader"
-version = "0.3.0"
+version = "1.0.0"
 authors = ["Frederik P. B. H. <frepbh@gmail.com>"]
 edition = "2018"
+repository = "https://github.com/F0903/dr-downloader"
+description = "A package for downloading media from DR-TV"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
