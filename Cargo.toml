@@ -5,7 +5,6 @@ authors = ["Frederik P. B. H. <frepbh@gmail.com>"]
 edition = "2018"
 repository = "https://github.com/F0903/dr-downloader"
 description = "A package for downloading media from DR-TV"
-license-file = "LICENSE"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
