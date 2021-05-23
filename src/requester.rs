@@ -62,7 +62,6 @@ impl Requester {
 		}
 		let mut token = lock_result.unwrap();
 
-		println!("Refreshing auth token...");
 		const REFRESH_ENDPOINT: &str =
 			"https://isl.dr-massive.com/api/authorization/refresh?ff=idp%2Cldp%2Crpt&lang=da";
 		let mut headers = header::HeaderMap::new();
@@ -87,7 +86,6 @@ impl Requester {
 			.ok_or_generic("Could not get JSON value.")?;
 		cache_token(&val).ok();
 		*token = val.to_owned();
-		println!("Refreshed auth token\nResuming...");
 		Ok(())
 	}
 

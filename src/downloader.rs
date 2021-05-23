@@ -2,6 +2,7 @@ mod urltype;
 
 use crate::converter::Converter;
 use crate::error::{OkOrGeneric, Result};
+use crate::event_subscriber::EventSubscriber;
 use crate::requester::Requester;
 use crate::util::remove_newline;
 use rayon::prelude::*;
@@ -14,17 +15,24 @@ lazy_static! {
 		regex::Regex::new(r#"(((https)|(http))(://www\.dr\.dk/drtv/)).*_\d+"#).unwrap();
 }
 
-pub struct Downloader {
+pub struct Downloader<'a> {
 	requester: Requester,
 	converter: Converter,
+	subscriber: Option<EventSubscriber<'a>>,
 }
 
-impl Downloader {
+impl<'a> Downloader<'a> {
 	pub fn new(requester: Requester, converter: Converter) -> Self {
 		Downloader {
 			requester,
 			converter,
+			subscriber: None,
 		}
+	}
+
+	pub fn with_subscriber(mut self, subscriber: EventSubscriber<'a>) -> Self {
+		self.subscriber = Some(subscriber);
+		self
 	}
 
 	async fn verify_url(url: &str) -> Result<()> {
@@ -51,21 +59,33 @@ impl Downloader {
 	) -> Result<()> {
 		let show_url = show_url.as_ref();
 		let out_dir = out_dir.into();
-		println!("Downloading show...");
+		if let Some(sub) = &self.subscriber {
+			sub.on_download(show_url);
+		}
 		let eps = self.requester.get_show_episodes(show_url).await?;
 		let rt = tokio::runtime::Handle::current();
 		eps.par_iter().for_each(|ep| {
 			let result = rt.block_on(self.download_episode(&ep, &out_dir));
 			match result {
-				Ok(_) => println!("Download of {} succeeded.", ep),
-				Err(_) => println!("Download of {} failed.", ep),
+				Ok(_) => {
+					if let Some(sub) = &self.subscriber {
+						sub.on_finish(ep);
+					}
+				}
+				Err(_) => {
+					if let Some(sub) = &self.subscriber {
+						sub.on_failed(ep);
+					}
+				}
 			}
 		});
 		Ok(())
 	}
 
 	async fn download_episode(&self, ep_url: &str, out_dir: &str) -> Result<()> {
-		println!("Downloading episode {}", ep_url);
+		if let Some(sub) = &self.subscriber {
+			sub.on_download(ep_url);
+		}
 		let info = Requester::get_episode_info(ep_url).await?;
 		let url = self.requester.get_episode_url(info.id).await?;
 		let content = Self::get_as_string(&url).await?;
