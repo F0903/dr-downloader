@@ -6,9 +6,10 @@ use serde_json::Value;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-pub struct EpisodeInfo<'a> {
-	pub name: &'a str,
-	pub id: &'a str,
+#[derive(Clone)]
+pub struct EpisodeInfo {
+	pub name: String,
+	pub id: String,
 }
 
 pub struct Requester {
@@ -137,12 +138,17 @@ impl Requester {
 		Ok(&url[id_start..id_end])
 	}
 
-	pub async fn get_episode_info(url: &str) -> Result<EpisodeInfo<'_>> {
+	/// Get EpisodeInfo from url.
+	pub async fn get_episode_info(url: String) -> Result<EpisodeInfo> {
 		let (name, id) =
 			tokio::try_join!(Self::parse_episode_name(&url), Self::parse_episode_id(&url))?;
-		Ok(EpisodeInfo { name, id })
+		Ok(EpisodeInfo {
+			name: name.to_owned(),
+			id: id.to_owned(),
+		})
 	}
 
+	/// Get a Vec of episode data urls from url.
 	pub async fn get_show_episodes(&self, show_url: &str) -> Result<Vec<String>> {
 		let url = Self::construct_show_query_url(show_url)?;
 		let response = self.net.get(url).send().await?;
@@ -166,6 +172,7 @@ impl Requester {
 		Ok(ep_links)
 	}
 
+	/// Get data url for episode with id ep_id.
 	#[async_recursion::async_recursion]
 	pub async fn get_episode_url<'b>(&self, ep_id: &str) -> Result<String> {
 		let url = Self::construct_ep_query_url(ep_id).await?;
