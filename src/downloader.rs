@@ -21,6 +21,8 @@ pub struct EpisodeData {
 	data: Vec<u8>,
 }
 
+pub type EpisodeCollection = Vec<Option<EpisodeData>>;
+
 pub struct Downloader<'a> {
 	requester: Requester,
 	converter: Converter,
@@ -74,7 +76,7 @@ impl<'a> Downloader<'a> {
 		})
 	}
 
-	async fn download_show_raw(&self, show_url: &str) -> Result<Vec<Option<EpisodeData>>> {
+	async fn download_show_raw(&self, show_url: &str) -> Result<EpisodeCollection> {
 		if let Some(sub) = &self.subscriber {
 			sub.on_download(show_url);
 		}
@@ -100,7 +102,7 @@ impl<'a> Downloader<'a> {
 					}
 				}
 			})
-			.collect::<Vec<Option<EpisodeData>>>();
+			.collect::<EpisodeCollection>();
 		Ok(show_data)
 	}
 
@@ -140,19 +142,17 @@ impl<'a> Downloader<'a> {
 	}
 
 	/// Download media from url to a Vec of optional EpisodeData.
-	pub async fn download_raw(&self, url: impl AsRef<str>) -> Result<Vec<Option<EpisodeData>>> {
+	pub async fn download_raw(&self, url: impl AsRef<str>) -> Result<EpisodeCollection> {
 		let url = Self::sanitize_url(url.as_ref());
 		Downloader::verify_url(url).await?;
 		let url_type = URLType::get(url)?;
 		match url_type {
-			URLType::Playlist => Ok::<Vec<Option<EpisodeData>>, Box<dyn std::error::Error>>(
+			URLType::Playlist => Ok::<EpisodeCollection, Box<dyn std::error::Error>>(
 				self.download_show_raw(url).await?,
 			),
-			URLType::Video => {
-				Ok::<Vec<Option<EpisodeData>>, Box<dyn std::error::Error>>(vec![Some(
-					self.download_episode_raw(url).await?,
-				)])
-			}
+			URLType::Video => Ok::<EpisodeCollection, Box<dyn std::error::Error>>(vec![Some(
+				self.download_episode_raw(url).await?,
+			)]),
 		}
 	}
 
