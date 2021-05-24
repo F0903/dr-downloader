@@ -23,7 +23,7 @@ jobs:
     - uses: Swatinem/rust-cache@v1
     
     - name: Build
-      run: cargo +nightly build --verbose --release
+      run: cargo build --verbose --release
     
     - name: Run tests
-      run: cargo +nightly test --verbose -p ${{ github.event.repository.name }}
+      run: cargo test --verbose -p ${{ github.event.repository.name }}
