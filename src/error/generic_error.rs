@@ -1,7 +1,6 @@
 use std::convert::From;
 use std::error::Error;
 use std::fmt::{self, Display, Formatter};
-use std::option::NoneError;
 
 #[derive(Debug)]
 pub struct GenericError(pub String);
@@ -9,12 +8,6 @@ pub struct GenericError(pub String);
 impl Display for GenericError {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
 		f.write_str(&self.0)
-	}
-}
-
-impl From<NoneError> for GenericError {
-	fn from(_err: NoneError) -> Self {
-		GenericError(String::from("Option contained no values."))
 	}
 }
 

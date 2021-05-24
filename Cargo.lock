@@ -137,7 +137,6 @@ dependencies = [
  "reqwest",
  "serde_json",
  "tokio",
- "winapi",
  "winreg 0.8.0",
 ]
 
