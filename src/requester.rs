@@ -1,16 +1,11 @@
 use crate::cacher::{cache_token, get_or_cache_token};
 use crate::error::{OkOrGeneric, Result};
+use crate::models::episode::EpisodeInfo;
 use crate::util::{find_char, rfind_char};
 use reqwest::{header, Client, StatusCode};
 use serde_json::Value;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-
-#[derive(Clone)]
-pub struct EpisodeInfo {
-	pub name: String,
-	pub id: String,
-}
 
 pub struct Requester {
 	net: Client,

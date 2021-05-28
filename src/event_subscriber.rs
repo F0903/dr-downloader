@@ -5,6 +5,7 @@ pub struct EventSubscriber<'a> {
 	on_failed: &'a (dyn Fn(&str) + Sync),
 }
 
+//TODO: Find better solution.
 impl<'a> EventSubscriber<'a> {
 	// Create new EventSubscriber with the specified callbacks.
 	pub fn new(

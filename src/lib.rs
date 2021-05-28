@@ -6,6 +6,8 @@ pub mod downloader;
 pub mod error;
 pub mod event_subscriber;
 pub mod requester;
+pub mod saver;
 
 mod cacher;
+mod models;
 mod util;
