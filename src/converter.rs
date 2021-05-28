@@ -1,8 +1,5 @@
-use std::fs;
 use std::io::{ErrorKind, Result, Write};
 use std::process::{Command, Stdio};
-
-const FFMPEG: &[u8] = include_bytes!("../ffmpeg-win32.exe");
 
 pub struct Converter {
 	ffmpeg_path: String,
@@ -10,13 +7,8 @@ pub struct Converter {
 
 impl Converter {
 	/// Attempt to create a new Converter.
-	pub fn new() -> Result<Self> {
-		let dir = std::env::temp_dir().join("ffmpeg.exe");
-		let dir_str = dir.to_str().ok_or(ErrorKind::InvalidData)?;
-		fs::write(&dir_str, FFMPEG)?;
-		Ok(Converter {
-			ffmpeg_path: dir_str.to_owned(),
-		})
+	pub fn new(ffmpeg_path: String) -> Result<Self> {
+		Ok(Converter { ffmpeg_path })
 	}
 
 	/// Convert data to another format through FFMPEG.
@@ -44,6 +36,7 @@ impl Converter {
 			.stdout(Stdio::inherit())
 			.spawn()?;
 		{
+			// VERY IMPORTANT: This scope is needed because FFMPEG waits for this pipe to close. Removal will cause freezing.
 			let mut inp = proc.stdin.take().ok_or(ErrorKind::BrokenPipe)?;
 			inp.write_all(&data)?;
 			inp.flush()?;

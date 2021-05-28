@@ -25,18 +25,23 @@ pub type EpisodeCollection = Vec<Option<EpisodeData>>;
 
 pub struct Downloader<'a> {
 	requester: Requester,
-	converter: Converter,
+	converter: Option<Converter>,
 	subscriber: Option<EventSubscriber<'a>>,
 }
 
 impl<'a> Downloader<'a> {
 	/// Create a new Downloader.
-	pub fn new(requester: Requester, converter: Converter) -> Self {
+	pub fn new(requester: Requester) -> Self {
 		Downloader {
 			requester,
-			converter,
+			converter: None,
 			subscriber: None,
 		}
+	}
+
+	pub fn with_converter(mut self, converter: Converter) -> Self {
+		self.converter = Some(converter);
+		self
 	}
 
 	// Add an EventSubscriber.
@@ -119,8 +124,9 @@ impl<'a> Downloader<'a> {
 			if let Some(sub) = &self.subscriber {
 				sub.on_convert(&ep.info.name);
 			}
-			self.converter
-				.convert(&ep.data, path.to_str().ok_or_generic("Path was invalid.")?)?;
+			if let Some(con) = &self.converter {
+				con.convert(&ep.data, path.to_str().ok_or_generic("Path was invalid.")?)?;
+			}
 		}
 		Ok(())
 	}
@@ -129,10 +135,12 @@ impl<'a> Downloader<'a> {
 		let data = self.download_episode_raw(ep_url).await?;
 		let mut path = path::PathBuf::from(out_dir);
 		path.push(format!("./{}.mp4", data.info.name));
-		self.converter.convert(
-			&data.data,
-			path.to_str().ok_or_generic("Path was invalid.")?,
-		)?;
+		if let Some(con) = &self.converter {
+			con.convert(
+				&data.data,
+				path.to_str().ok_or_generic("Path was invalid.")?,
+			)?;
+		}
 		Ok(())
 	}
 
