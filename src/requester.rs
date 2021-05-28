@@ -21,7 +21,7 @@ impl Requester {
 	pub async fn new<'a>() -> Result<Requester> {
 		let net = Client::new();
 		let token = Arc::new(Mutex::new(
-			get_or_cache_token(async || Requester::get_auth_token(&net).await).await?,
+			get_or_cache_token(|| Requester::get_auth_token(&net)).await?,
 		));
 		Ok(Requester { net, token })
 	}
