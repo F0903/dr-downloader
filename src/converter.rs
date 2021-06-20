@@ -7,8 +7,8 @@ pub struct Converter {
 
 impl Converter {
 	/// Attempt to create a new Converter.
-	pub fn new(ffmpeg_path: String) -> Result<Self> {
-		Ok(Converter { ffmpeg_path })
+	pub fn new(ffmpeg_path: String) -> Self {
+		Converter { ffmpeg_path }
 	}
 
 	/// Convert data to another format through FFMPEG.
