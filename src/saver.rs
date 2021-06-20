@@ -1,6 +1,9 @@
 use crate::converter::Converter;
 use crate::downloader::Downloader;
+use crate::error::ok_or_generic::OkOrGeneric;
 use crate::error::Result;
+use crate::event_subscriber::EventSubscriber;
+use crate::models::URLType;
 use std::path;
 
 /// A utility for downloading media to a path.
@@ -8,6 +11,7 @@ pub struct Saver<'a> {
 	downloader: Downloader<'a>,
 	converter: Option<Converter>,
 	extension: &'a str,
+	subscriber: Option<EventSubscriber<'a>>,
 }
 
 impl<'a> Saver<'a> {
@@ -16,6 +20,7 @@ impl<'a> Saver<'a> {
 			downloader,
 			converter: None,
 			extension: "mp4",
+			subscriber: None,
 		}
 	}
 
@@ -25,11 +30,21 @@ impl<'a> Saver<'a> {
 		self
 	}
 
-	fn save_ep() {}
+	async fn save_ep(&self, ep_url: impl AsRef<str>, out_dir: impl AsRef<str>) -> Result<()> {
+		let ep_url = ep_url.as_ref();
+		let out_dir = out_dir.as_ref();
+		let ep = self.downloader.download_episode(ep_url).await?;
+		let mut path = path::PathBuf::from(out_dir);
+		path.push(format!("./{}.mp4", ep.info.name));
+		if let Some(con) = &self.converter {
+			con.convert(&ep.data, path.to_str().ok_or_generic("Path was invalid.")?)?;
+		}
+		Ok(())
+	}
 
-	async fn save_show(&self, show_url: impl AsRef<str>, out_dir: impl Into<String>) -> Result<()> {
+	async fn save_show(&self, show_url: impl AsRef<str>, out_dir: impl AsRef<str>) -> Result<()> {
 		let show_url = show_url.as_ref();
-		let out_dir = out_dir.into();
+		let out_dir = out_dir.as_ref();
 		for ep in self
 			.downloader
 			.download_show(show_url)
@@ -49,42 +64,12 @@ impl<'a> Saver<'a> {
 		Ok(())
 	}
 
-	pub fn save(&self, url: impl AsRef<str>, out_dir: impl AsRef<str>) -> Result<()> {}
+	pub async fn save(&self, url: impl AsRef<str>, out_dir: impl AsRef<str>) -> Result<()> {
+		let url = url.as_ref();
+		let url_type = URLType::get(url)?;
+		match url_type {
+			URLType::Video => self.save_ep(&url, out_dir).await,
+			URLType::Playlist => self.save_show(&url, out_dir).await,
+		}
+	}
 }
-
-/*
-
-async fn download_show(
-		&self,
-		show_url: impl AsRef<str>,
-		out_dir: impl Into<String>,
-	) -> Result<()> {
-		let show_url = show_url.as_ref();
-		let out_dir = out_dir.into();
-		for ep in self.download_show_raw(show_url).await?.iter().flatten() {
-			let mut path = path::PathBuf::from(&out_dir);
-			path.push(format!("./{}.mp4", ep.info.name));
-			if let Some(sub) = &self.subscriber {
-				sub.on_convert(&ep.info.name);
-			}
-			if let Some(con) = &self.converter {
-				con.convert(&ep.data, path.to_str().ok_or_generic("Path was invalid.")?)?;
-			}
-		}
-		Ok(())
-	}
-
-	async fn download_episode<T: Into<String>>(&self, ep_url: T, out_dir: &str) -> Result<()> {
-		let data = self.download_episode_raw(ep_url).await?;
-		let mut path = path::PathBuf::from(out_dir);
-		path.push(format!("./{}.mp4", data.info.name));
-		if let Some(con) = &self.converter {
-			con.convert(
-				&data.data,
-				path.to_str().ok_or_generic("Path was invalid.")?,
-			)?;
-		}
-		Ok(())
-	}
-
-*/
