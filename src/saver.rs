@@ -9,7 +9,7 @@ use std::path;
 pub struct Saver<'a> {
 	downloader: Downloader<'a>,
 	converter: Option<Converter<'a>>,
-	extension: &'a str,
+	extension: String,
 }
 
 impl<'a> Saver<'a> {
@@ -17,13 +17,24 @@ impl<'a> Saver<'a> {
 		Saver {
 			downloader,
 			converter: None,
-			extension: "mp4",
+			extension: ".m3u8".to_owned(),
 		}
 	}
 
-	pub fn with_converter(mut self, converter: Converter<'a>, extension: &'a str) -> Self {
+	pub fn with_converter(
+		mut self,
+		converter: Converter<'a>,
+		extension: impl Into<String>,
+	) -> Self {
 		self.converter = Some(converter);
-		self.extension = extension;
+		let extension = extension.into();
+		self.extension = if !extension.starts_with('.') {
+			let mut temp = extension.to_owned();
+			temp.insert(0, '.');
+			temp
+		} else {
+			extension
+		};
 		self
 	}
 
@@ -31,7 +42,7 @@ impl<'a> Saver<'a> {
 		let out_dir = out_dir.as_ref();
 		let ep = self.downloader.download_episode(ep_url).await?;
 		let mut path = path::PathBuf::from(out_dir);
-		path.push(format!("./{}.mp4", ep.info.name));
+		path.push(format!("./{}{}", ep.info.name, self.extension));
 		if let Some(con) = &self.converter {
 			con.convert(&ep.data, path.to_str().ok_or_generic("Path was invalid.")?)?;
 		}
