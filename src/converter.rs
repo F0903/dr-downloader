@@ -1,10 +1,11 @@
 use crate::event::Event;
+use std::borrow::Cow;
 use std::io::{ErrorKind, Result, Write};
 use std::process::{Command, Stdio};
 
 pub struct Converter<'a> {
 	ffmpeg_path: String,
-	on_convert: Event<'a, ()>,
+	pub on_convert: Event<'a, Cow<'a, str>>,
 }
 
 impl<'a> Converter<'a> {
@@ -22,6 +23,10 @@ impl<'a> Converter<'a> {
 		std::fs::File::create(out_path)?; // Create file first otherwise canonicalize wont work.
 		let out_path = std::fs::canonicalize(out_path)?;
 		let out_path = out_path.to_str().ok_or(ErrorKind::NotFound)?;
+		self.on_convert.call(Cow::Owned(format!(
+			"Starting conversion of {}...",
+			out_path
+		)));
 		let mut proc = Command::new(&self.ffmpeg_path)
 			.args(&[
 				"-y",
@@ -47,7 +52,6 @@ impl<'a> Converter<'a> {
 			inp.flush()?;
 		}
 		proc.wait()?;
-		self.on_convert.call(());
 		Ok(())
 	}
 }
