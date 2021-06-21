@@ -3,6 +3,7 @@ use crate::downloader::Downloader;
 use crate::error::ok_or_generic::OkOrGeneric;
 use crate::error::Result;
 use crate::models::URLType;
+use crate::util::{legalize_filename, remove_newline_string};
 use std::path;
 
 /// A utility for downloading media to a path.
@@ -43,8 +44,7 @@ impl<'a> Saver<'a> {
 		let ep = self.downloader.download_episode(ep_url).await?;
 		let mut path = path::PathBuf::from(out_dir);
 		let legal_name = crate::util::legalize_filename(&ep.info.name);
-		println!("DEBUG: legalized filename: {}", legal_name); //TODO: REMOVE
-		path.push(format!("./{}{}", legal_name, self.extension));
+		path.push(format!("{}{}", legal_name, self.extension));
 		println!("DEBUG: full filename: {:?}", path); //TODO: REMOVE
 		if let Some(con) = &self.converter {
 			con.convert(&ep.data, path.to_str().ok_or_generic("Path was invalid.")?)?;
@@ -64,8 +64,8 @@ impl<'a> Saver<'a> {
 			.flatten()
 		{
 			let mut path = path::PathBuf::from(&out_dir);
-			let legal_name = crate::util::legalize_filename(&ep.info.name);
-			path.push(format!("./{}{}", legal_name, self.extension));
+			let legal_name = legalize_filename(&ep.info.name);
+			path.push(format!("{}{}", legal_name, self.extension));
 			if let Some(con) = &self.converter {
 				con.convert(&ep.data, path.to_str().ok_or_generic("Path was invalid.")?)?;
 			} else {
@@ -75,8 +75,13 @@ impl<'a> Saver<'a> {
 		Ok(())
 	}
 
+	fn sanitize_url(url: &mut String) {
+		remove_newline_string(url);
+	}
+
 	pub async fn save(&self, url: impl Into<String>, out_dir: impl AsRef<str>) -> Result<()> {
-		let url = url.into();
+		let mut url = url.into();
+		Self::sanitize_url(&mut url);
 		let url_type = URLType::get(&url)?;
 		match url_type {
 			URLType::Video => self.save_ep(url, out_dir).await,

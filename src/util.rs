@@ -13,6 +13,10 @@ pub fn remove_newline(string: &str) -> &str {
 	&string[..end]
 }
 
+pub fn remove_newline_string(string: &mut String) {
+	string.retain(|x| x != '\r' || x != '\n')
+}
+
 pub fn find_char(
 	string: impl AsRef<str>,
 	to_find: char,
