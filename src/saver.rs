@@ -45,6 +45,7 @@ impl<'a> Saver<'a> {
 		let legal_name = crate::util::legalize_filename(&ep.info.name);
 		println!("DEBUG: legalized filename: {}", legal_name); //TODO: REMOVE
 		path.push(format!("./{}{}", legal_name, self.extension));
+		println!("DEBUG: full filename: {:?}", path); //TODO: REMOVE
 		if let Some(con) = &self.converter {
 			con.convert(&ep.data, path.to_str().ok_or_generic("Path was invalid.")?)?;
 		} else {
