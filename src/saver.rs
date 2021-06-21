@@ -45,6 +45,8 @@ impl<'a> Saver<'a> {
 		path.push(format!("./{}{}", ep.info.name, self.extension));
 		if let Some(con) = &self.converter {
 			con.convert(&ep.data, path.to_str().ok_or_generic("Path was invalid.")?)?;
+		} else {
+			std::fs::write(path, &ep.data)?;
 		}
 		Ok(())
 	}
@@ -59,9 +61,11 @@ impl<'a> Saver<'a> {
 			.flatten()
 		{
 			let mut path = path::PathBuf::from(&out_dir);
-			path.push(format!("./{}.mp4", ep.info.name));
+			path.push(format!("./{}{}", ep.info.name, self.extension));
 			if let Some(con) = &self.converter {
 				con.convert(&ep.data, path.to_str().ok_or_generic("Path was invalid.")?)?;
+			} else {
+				std::fs::write(path, &ep.data)?;
 			}
 		}
 		Ok(())
