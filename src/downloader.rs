@@ -1,10 +1,11 @@
 use crate::error::Result;
-use crate::event_subscriber::EventSubscriber;
+use crate::event::Event;
 use crate::models::{episode::EpisodeData, URLType};
 use crate::requester::Requester;
 use crate::util::remove_newline;
 use rayon::prelude::*;
 use reqwest::StatusCode;
+use std::borrow::Cow;
 
 lazy_static! {
 	static ref DR_EP_URL_REGEX: regex::Regex =
@@ -15,7 +16,9 @@ pub type EpisodeCollection = Vec<Option<EpisodeData>>;
 
 pub struct Downloader<'a> {
 	requester: Requester,
-	subscriber: Option<EventSubscriber<'a>>,
+	pub download_event: Event<'a, Cow<'a, str>>,
+	pub finished_event: Event<'a, Cow<'a, str>>,
+	pub failed_event: Event<'a, Cow<'a, str>>,
 }
 
 impl<'a> Downloader<'a> {
@@ -23,14 +26,10 @@ impl<'a> Downloader<'a> {
 	pub fn new(requester: Requester) -> Self {
 		Downloader {
 			requester,
-			subscriber: None,
+			download_event: Event::new(),
+			finished_event: Event::new(),
+			failed_event: Event::new(),
 		}
-	}
-
-	// Add an EventSubscriber.
-	pub fn with_subscriber(mut self, subscriber: EventSubscriber<'a>) -> Self {
-		self.subscriber = Some(subscriber);
-		self
 	}
 
 	async fn verify_url(url: &str) -> Result<()> {
@@ -50,11 +49,8 @@ impl<'a> Downloader<'a> {
 		Ok(text)
 	}
 
-	pub(crate) async fn download_episode<T: Into<String>>(&self, ep_url: T) -> Result<EpisodeData> {
-		let ep_url = ep_url.into();
-		if let Some(sub) = &self.subscriber {
-			sub.on_download(&ep_url);
-		}
+	pub(crate) async fn download_episode(&self, ep_url: String) -> Result<EpisodeData> {
+		self.download_event.call(Cow::Owned(ep_url.clone()));
 		let info = Requester::get_episode_info(ep_url).await?;
 		let url = self.requester.get_episode_url(&info.id).await?;
 		let content = Self::get_as_string(&url).await?;
@@ -64,11 +60,9 @@ impl<'a> Downloader<'a> {
 		})
 	}
 
-	pub(crate) async fn download_show(&self, show_url: &str) -> Result<EpisodeCollection> {
-		if let Some(sub) = &self.subscriber {
-			sub.on_download(show_url);
-		}
-		let eps = self.requester.get_show_episodes(show_url).await?;
+	pub(crate) async fn download_show(&self, show_url: String) -> Result<EpisodeCollection> {
+		self.download_event.call(Cow::Owned(show_url.clone()));
+		let eps = self.requester.get_show_episodes(&show_url).await?;
 		let rt = tokio::runtime::Handle::current();
 		let show_data = eps
 			.into_par_iter()
@@ -77,15 +71,11 @@ impl<'a> Downloader<'a> {
 				let result = rt.block_on(self.download_episode(ep));
 				match result {
 					Ok(data) => {
-						if let Some(sub) = &self.subscriber {
-							sub.on_finish(&url_copy);
-						}
+						self.finished_event.call(Cow::Owned(url_copy));
 						Some(data)
 					}
 					Err(_) => {
-						if let Some(sub) = &self.subscriber {
-							sub.on_failed(&url_copy);
-						}
+						self.failed_event.call(Cow::Owned(url_copy));
 						None
 					}
 				}
@@ -101,9 +91,9 @@ impl<'a> Downloader<'a> {
 
 	/// Download media from url to a Vec of optional EpisodeData.
 	pub async fn download(&self, url: impl AsRef<str>) -> Result<EpisodeCollection> {
-		let url = Self::sanitize_url(url.as_ref());
-		Downloader::verify_url(url).await?;
-		let url_type = URLType::get(url)?;
+		let url = String::from(Self::sanitize_url(url.as_ref()));
+		Downloader::verify_url(&url).await?;
+		let url_type = URLType::get(&url)?;
 		match url_type {
 			URLType::Playlist => {
 				Ok::<EpisodeCollection, Box<dyn std::error::Error>>(self.download_show(url).await?)

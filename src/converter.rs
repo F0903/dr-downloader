@@ -1,20 +1,25 @@
+use crate::event::Event;
 use std::io::{ErrorKind, Result, Write};
 use std::process::{Command, Stdio};
 
-pub struct Converter {
+pub struct Converter<'a> {
 	ffmpeg_path: String,
+	on_convert: Event<'a, ()>,
 }
 
-impl Converter {
+impl<'a> Converter<'a> {
 	/// Attempt to create a new Converter.
 	pub fn new(ffmpeg_path: String) -> Self {
-		Converter { ffmpeg_path }
+		Converter {
+			ffmpeg_path,
+			on_convert: Event::new(),
+		}
 	}
 
 	/// Convert data to another format through FFMPEG.
 	pub fn convert(&self, data: &[u8], out_path: impl AsRef<str>) -> Result<()> {
 		let out_path = out_path.as_ref();
-		std::fs::write(out_path, "")?; // Create file first otherwise canonicalize wont work.
+		std::fs::File::create(out_path)?; // Create file first otherwise canonicalize wont work.
 		let out_path = std::fs::canonicalize(out_path)?;
 		let out_path = out_path.to_str().ok_or(ErrorKind::NotFound)?;
 		let mut proc = Command::new(&self.ffmpeg_path)
@@ -42,6 +47,7 @@ impl Converter {
 			inp.flush()?;
 		}
 		proc.wait()?;
+		self.on_convert.call(());
 		Ok(())
 	}
 }
