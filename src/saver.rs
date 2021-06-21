@@ -42,7 +42,9 @@ impl<'a> Saver<'a> {
 		let out_dir = out_dir.as_ref();
 		let ep = self.downloader.download_episode(ep_url).await?;
 		let mut path = path::PathBuf::from(out_dir);
-		path.push(format!("./{}{}", ep.info.name, self.extension));
+		let legal_name = crate::util::legalize_filename(&ep.info.name);
+		println!("DEBUG: legalized filename: {}", legal_name); //TODO: REMOVE
+		path.push(format!("./{}{}", legal_name, self.extension));
 		if let Some(con) = &self.converter {
 			con.convert(&ep.data, path.to_str().ok_or_generic("Path was invalid.")?)?;
 		} else {
@@ -61,7 +63,8 @@ impl<'a> Saver<'a> {
 			.flatten()
 		{
 			let mut path = path::PathBuf::from(&out_dir);
-			path.push(format!("./{}{}", ep.info.name, self.extension));
+			let legal_name = crate::util::legalize_filename(&ep.info.name);
+			path.push(format!("./{}{}", legal_name, self.extension));
 			if let Some(con) = &self.converter {
 				con.convert(&ep.data, path.to_str().ok_or_generic("Path was invalid.")?)?;
 			} else {
