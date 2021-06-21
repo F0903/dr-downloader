@@ -44,9 +44,7 @@ impl<'a> Saver<'a> {
 		let ep = self.downloader.download_episode(ep_url).await?;
 		let mut path = path::PathBuf::from(out_dir);
 		let legal_name = crate::util::legalize_filename(&ep.info.name);
-		println!("DEBUG: extension: {:?}", self.extension); //TODO: REMOVE
 		path.push(format!("{}{}", legal_name, self.extension));
-		println!("DEBUG: full filename: {:?}", path); //TODO: REMOVE
 		if let Some(con) = &self.converter {
 			con.convert(&ep.data, path.to_str().ok_or_generic("Path was invalid.")?)?;
 		} else {
