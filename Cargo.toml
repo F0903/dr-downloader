@@ -1,6 +1,6 @@
 [package]
 name = "dr-downloader"
-version = "0.4.1"
+version = "0.5.0"
 authors = ["Frederik P. B. H. <frepbh@gmail.com>"]
 edition = "2018"
 repository = "https://github.com/F0903/dr-downloader"
