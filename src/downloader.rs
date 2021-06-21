@@ -51,9 +51,10 @@ impl<'a> Downloader<'a> {
 
 	pub(crate) async fn download_episode(&self, ep_url: String) -> Result<EpisodeData> {
 		self.download_event.call(Cow::Owned(ep_url.clone()));
-		let info = Requester::get_episode_info(ep_url).await?;
+		let info = Requester::get_episode_info(ep_url.clone()).await?;
 		let url = self.requester.get_episode_url(&info.id).await?;
 		let content = Self::get_as_string(&url).await?;
+		self.finished_event.call(Cow::Owned(ep_url));
 		Ok(EpisodeData {
 			info,
 			data: content.as_bytes().into(),

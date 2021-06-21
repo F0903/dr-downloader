@@ -48,7 +48,7 @@ impl<'a> Converter<'a> {
 		{
 			// VERY IMPORTANT: This scope is needed because FFMPEG waits for this pipe to close. Removal will cause freezing.
 			let mut inp = proc.stdin.take().ok_or(ErrorKind::BrokenPipe)?;
-			inp.write_all(&data)?;
+			inp.write_all(data)?;
 			inp.flush()?;
 		}
 		proc.wait()?;

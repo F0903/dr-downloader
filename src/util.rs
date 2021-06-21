@@ -14,7 +14,7 @@ pub fn remove_newline(string: &str) -> &str {
 }
 
 pub fn remove_newline_string(string: &mut String) {
-	string.retain(|x| x != '\r' || x != '\n')
+	string.retain(|x| !(x == '\r' || x == '\n'))
 }
 
 pub fn find_char(
