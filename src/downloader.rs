@@ -43,6 +43,10 @@ impl<'a> Downloader<'a> {
 		}
 	}
 
+	pub async fn default_async() -> Result<Downloader<'a>> {
+		Ok(Self::new(Requester::new().await?))
+	}
+
 	async fn verify_url(url: &str) -> Result<()> {
 		if !DR_EP_URL_REGEX.is_match(url) {
 			return Err("Unrecognzed URL.".into());
