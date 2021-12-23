@@ -21,6 +21,17 @@ pub struct Downloader<'a> {
 	pub failed_event: Event<'a, Cow<'a, str>>,
 }
 
+impl<'a> Default for Downloader<'a> {
+	/// Create a default Downloader.
+	fn default() -> Self {
+		let rt = tokio::runtime::Handle::current();
+		let requester = rt
+			.block_on(Requester::new())
+			.expect("Could not wait for requester future. Try using Downloader::new() manually.");
+		Self::new(requester)
+	}
+}
+
 impl<'a> Downloader<'a> {
 	/// Create a new Downloader.
 	pub fn new(requester: Requester) -> Self {
