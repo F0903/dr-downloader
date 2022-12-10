@@ -1,4 +1,4 @@
-use crate::cacher::{cache_token, get_or_cache_token};
+use crate::cacher::{get_or_set_token, set_token};
 use crate::error::{OkOrGeneric, Result};
 use crate::models::episode::EpisodeInfo;
 use crate::util::{find_char, rfind_char};
@@ -16,7 +16,7 @@ impl Requester {
     pub async fn new<'a>() -> Result<Requester> {
         let net = Client::new();
         let token = Arc::new(Mutex::new(
-            get_or_cache_token(|| Requester::get_auth_token(&net)).await?,
+            get_or_set_token(|| Requester::get_auth_token(&net)).await?,
         ));
         Ok(Requester { net, token })
     }
@@ -80,7 +80,7 @@ impl Requester {
         let val = json["value"]
             .as_str()
             .ok_or_generic("Could not get JSON value.")?;
-        cache_token(&val).ok();
+        set_token(&val).ok();
         *token = val.to_owned();
         Ok(())
     }
