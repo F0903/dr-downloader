@@ -1,6 +1,6 @@
 [package]
 name = "dr-downloader"
-version = "0.5.4"
+version = "0.5.5"
 keywords = ["downloader", "dr", "drtv", "async"]
 authors = ["Frederik P. B. H. <frepbh@gmail.com>"]
 edition = "2021"
