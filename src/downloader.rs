@@ -59,6 +59,9 @@ impl<'a> Downloader<'a> {
         let result = reqwest::get(url).await?;
         let status = result.status();
         if status != StatusCode::OK {
+            if status == StatusCode::UNAUTHORIZED {
+                return Err("Status code was 401 (Unauthorized). Try using a new token.".into());
+            }
             return Err(format!("Status code was not 200 OK.\nCode: {}", status).into());
         }
         let text = result.text().await?;
