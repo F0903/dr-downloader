@@ -1,3 +1,4 @@
+#[derive(Clone)]
 pub struct Event<'a, A> {
     subscribers: Vec<&'a (dyn Fn(&A) + Sync)>,
 }

@@ -7,6 +7,7 @@ use crate::util::{legalize_filename, remove_newline_string};
 use std::path;
 
 /// A utility for downloading media to a path.
+#[derive(Clone)]
 pub struct Saver<'a> {
     downloader: Downloader<'a>,
     converter: Option<Converter<'a>>,

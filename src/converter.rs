@@ -3,6 +3,7 @@ use std::borrow::Cow;
 use std::io::{ErrorKind, Result, Write};
 use std::process::{Command, Stdio};
 
+#[derive(Clone)]
 pub struct Converter<'a> {
     ffmpeg_path: String,
     pub on_convert: Event<'a, Cow<'a, str>>,

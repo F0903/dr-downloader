@@ -14,6 +14,7 @@ lazy_static! {
 
 pub type EpisodeCollection = Vec<Option<EpisodeData>>;
 
+#[derive(Clone)]
 pub struct Downloader<'a> {
     requester: Requester,
     pub download_event: Event<'a, Cow<'a, str>>,
