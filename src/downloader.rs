@@ -44,6 +44,10 @@ impl<'a> Downloader<'a> {
         }
     }
 
+    pub fn get_requester(&self) -> &Requester {
+        &self.requester
+    }
+
     pub async fn default_async() -> Result<Downloader<'a>> {
         Ok(Self::new(Requester::new().await?))
     }
@@ -70,7 +74,7 @@ impl<'a> Downloader<'a> {
 
     pub(crate) async fn download_episode(&self, ep_url: String) -> Result<EpisodeData> {
         self.download_event.call(Cow::Owned(ep_url.clone()));
-        let info = Requester::get_episode_info(ep_url.clone()).await?;
+        let info = self.requester.get_episode_info(&ep_url).await?;
         let url = self.requester.get_episode_url(&info.id).await?;
         let content = Self::get_as_string(&url).await?;
         self.finished_event.call(Cow::Owned(ep_url));

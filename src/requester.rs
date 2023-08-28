@@ -1,25 +1,19 @@
-use crate::cacher::{get_or_set_token, set_token};
+use crate::cacher::{get_or_set_token, get_token, set_token};
 use crate::error::{OkOrGeneric, Result};
 use crate::models::episode::EpisodeInfo;
 use crate::util::{find_char, rfind_char};
 use reqwest::{header, Client, StatusCode};
 use serde_json::Value;
-use std::sync::Arc;
-use tokio::sync::Mutex;
 
 #[derive(Clone)]
 pub struct Requester {
     net: Client,
-    token: Arc<Mutex<String>>,
 }
 
 impl Requester {
     pub async fn new<'a>() -> Result<Requester> {
         let net = Client::new();
-        let token = Arc::new(Mutex::new(
-            get_or_set_token(|| Requester::get_auth_token(&net)).await?,
-        ));
-        Ok(Requester { net, token })
+        Ok(Requester { net })
     }
 
     async fn get_auth_token<'b>(net: &Client) -> Result<String> {
@@ -51,13 +45,7 @@ impl Requester {
     }
 
     async fn refresh_token(&self) -> Result<()> {
-        let lock_result = self.token.try_lock();
-        if lock_result.is_err() {
-            // If token is locked. (already refreshing)
-            let _lock = self.token.lock().await; // Wait for refresh
-            return Ok(());
-        }
-        let mut token = lock_result.unwrap();
+        let token = get_token()?;
 
         const REFRESH_ENDPOINT: &str =
             "https://production.dr-massive.com/api/authorization/refresh?ff=idp%2Cldp%2Crpt&lang=da";
@@ -82,7 +70,6 @@ impl Requester {
             .as_str()
             .ok_or_generic("Could not get JSON value.")?;
         set_token(&val).ok();
-        *token = val.to_owned();
         Ok(())
     }
 
@@ -135,9 +122,9 @@ impl Requester {
     }
 
     /// Get EpisodeInfo from url.
-    pub async fn get_episode_info(url: String) -> Result<EpisodeInfo> {
+    pub async fn get_episode_info(&self, url: &str) -> Result<EpisodeInfo> {
         let (name, id) =
-            tokio::try_join!(Self::parse_episode_name(&url), Self::parse_episode_id(&url))?;
+            tokio::try_join!(Self::parse_episode_name(url), Self::parse_episode_id(url))?;
         Ok(EpisodeInfo {
             name: name.to_owned(),
             id: id.to_owned(),
@@ -172,8 +159,14 @@ impl Requester {
     #[async_recursion::async_recursion]
     pub async fn get_episode_url<'b>(&self, ep_id: &str) -> Result<String> {
         let url = Self::construct_ep_query_url(ep_id).await?;
-        let token = self.token.lock().await;
-        let result = self.net.get(url).bearer_auth(token).send().await?;
+        let token = get_or_set_token(|| Requester::get_auth_token(&self.net)).await?;
+        let result = self.net.get(url).bearer_auth(token).send().await;
+
+        if let Err(e) = &result {
+            println!("{:?}", e);
+        }
+
+        let result = result?;
 
         let status = result.status();
         if status == StatusCode::UNAUTHORIZED || status == StatusCode::FORBIDDEN {
