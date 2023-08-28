@@ -1,6 +1,6 @@
 [package]
 name = "dr-downloader"
-version = "0.6.0"
+version = "0.6.1"
 keywords = ["downloader", "dr", "drtv", "async"]
 authors = ["Frederik P. B. H. <frepbh@gmail.com>"]
 edition = "2021"
@@ -9,6 +9,11 @@ description = "A package for downloading media from DR-TV"
 license-file = "LICENSE"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[profile.release]
+strip = true    # Automatically strip symbols from the binary.
+opt-level = "z" # Optimize for size.
+lto = true
 
 [lib]
 crate-type = ["lib"]
