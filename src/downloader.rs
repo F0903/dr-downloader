@@ -119,12 +119,8 @@ impl<'a> Downloader<'a> {
         Downloader::verify_url(&url).await?;
         let url_type = URLType::get(&url)?;
         match url_type {
-            URLType::Playlist => {
-                Ok::<EpisodeCollection, Box<dyn std::error::Error>>(self.download_show(url).await?)
-            }
-            URLType::Video => Ok::<EpisodeCollection, Box<dyn std::error::Error>>(vec![Some(
-                self.download_episode(url).await?,
-            )]),
+            URLType::Playlist => Ok(self.download_show(url).await?),
+            URLType::Video => Ok(vec![Some(self.download_episode(url).await?)]),
         }
     }
 }

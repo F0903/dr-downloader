@@ -1,6 +1,6 @@
+use crate::error::Result;
 use crate::event::Event;
 use std::borrow::Cow;
-use std::io::{ErrorKind, Result};
 use std::process::{Command, Stdio};
 
 #[derive(Clone)]
@@ -25,7 +25,7 @@ impl<'a> Converter<'a> {
         let out_path = out_path.as_ref();
         std::fs::File::create(out_path)?; // Create file first otherwise canonicalize wont work.
         let out_path = std::fs::canonicalize(out_path)?;
-        let out_path = out_path.to_str().ok_or(ErrorKind::NotFound)?;
+        let out_path = out_path.to_str().ok_or("Invalid output path.")?;
         self.on_convert.call(Cow::Owned(out_path.to_owned()));
         let mut proc = Command::new(&self.ffmpeg_path)
             .args(&[
@@ -44,7 +44,11 @@ impl<'a> Converter<'a> {
             .stdin(Stdio::inherit())
             .stderr(Stdio::inherit())
             .stdout(Stdio::inherit())
-            .spawn()?;
+            .spawn()
+            .map_err(|_| {
+                "Could not start FFmpeg. Please install and copy to downloader root, or add to PATH."
+                    .to_owned()
+            })?;
         proc.wait()?;
         self.on_done.call(Cow::Owned(out_path.to_owned()));
         Ok(())
